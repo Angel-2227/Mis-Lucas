@@ -4,8 +4,7 @@ import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, cop } from './lib'
 import { Sheet, Field, MoneyInput, CatDot } from './ui'
 
 function AccountForm({ acc, onSave, onDelete, onClose }) {
-  const [f, setF] = useState({ type: 'debit', name: '', initial: '', number: '', owner: '', locked: false, color: ACCOUNT_COLORS[0], ...acc, initial: String(acc?.initial ?? '') })
-  const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  const [f, setF] = useState({ type: 'debit', name: '', number: '', owner: '', locked: false, color: ACCOUNT_COLORS[0], ...acc, initial: String(acc?.initial ?? '') })
   const hasNumber = f.type === 'sitp' || f.type === 'debit' || f.type === 'credit'
   return (
     <Sheet title={acc ? 'Editar cuenta' : 'Nueva cuenta'} onClose={onClose}>
@@ -25,7 +24,7 @@ function AccountForm({ acc, onSave, onDelete, onClose }) {
 }
 
 function RecurringForm({ r, d, onSave, onDelete, onClose }) {
-  const [f, setF] = useState({ name: '', amount: '', accountId: '', skipMonths: [], ...r, amount: String(r?.amount ?? '') })
+  const [f, setF] = useState({ name: '', accountId: '', skipMonths: [], ...r, amount: String(r?.amount ?? '') })
   const toggle = (m) => setF((p) => ({ ...p, skipMonths: p.skipMonths.includes(m) ? p.skipMonths.filter((x) => x !== m) : [...p.skipMonths, m] }))
   return (
     <Sheet title="Ingreso recurrente" onClose={onClose}>
