@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
 import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart } from 'lucide-react'
@@ -23,11 +23,12 @@ function useCollection(uid, name) {
 
 function useSettings(uid) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const seeded = useRef(false)
   useEffect(() => {
     const ref = doc(db, 'users', uid, 'meta', 'settings')
-    return onSnapshot(ref, (s) => {
+    return onSnapshot(ref, { includeMetadataChanges: true }, (s) => {
       if (s.exists()) setSettings({ ...DEFAULT_SETTINGS, ...s.data() })
-      else setDoc(ref, DEFAULT_SETTINGS)
+      else if (!s.metadata.fromCache && !seeded.current) { seeded.current = true; setDoc(ref, DEFAULT_SETTINGS) }
     })
   }, [uid])
   return settings

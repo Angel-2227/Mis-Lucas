@@ -129,3 +129,5 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .login .btn.primary{background:var(--lime);color:var(--dark)}
 :focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.seg button{padding:9px 2px;font-size:13px}
+.seg{gap:2px}

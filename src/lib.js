@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS = {
   skipped: [],
 }
 
-export const ACCOUNT_TYPES = { cash: 'Efectivo', debit: 'Débito', credit: 'Crédito', sitp: 'SITP' }
+export const ACCOUNT_TYPES = { cash: 'Efectivo', debit: 'Débito', savings: 'Ahorros', credit: 'Crédito', sitp: 'SITP' }
 export const ACCOUNT_COLORS = ['#13241B', '#1F3FBF', '#6A2C91', '#B5381E', '#0F6B5B', '#3A3A3A']
 
 // Saldo de cada cuenta = saldo inicial + movimientos. Borrar un movimiento lo revierte solo.

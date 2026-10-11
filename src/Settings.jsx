@@ -5,16 +5,17 @@ import { Sheet, Field, MoneyInput, CatDot } from './ui'
 
 function AccountForm({ acc, onSave, onDelete, onClose }) {
   const [f, setF] = useState({ type: 'debit', name: '', number: '', owner: '', locked: false, color: ACCOUNT_COLORS[0], ...acc, initial: String(acc?.initial ?? '') })
-  const hasNumber = f.type === 'sitp' || f.type === 'debit' || f.type === 'credit'
+  const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
+  const hasNumber = f.type !== 'cash'
   return (
     <Sheet title={acc ? 'Editar cuenta' : 'Nueva cuenta'} onClose={onClose}>
       <Field label="Tipo">
         <div className="seg">{Object.entries(ACCOUNT_TYPES).map(([k, l]) => <button key={k} className={f.type === k ? 'on' : ''} onClick={() => set('type', k)}>{l}</button>)}</div>
       </Field>
-      <Field label="Nombre"><input className="input" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.type === 'sitp' ? 'SITP mía' : 'Cuenta de ahorros'} /></Field>
+      <Field label="Nombre"><input className="input" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.type === 'sitp' ? 'SITP mía' : f.type === 'savings' ? 'Nequi' : 'Cuenta'} /></Field>
       <Field label={f.type === 'credit' ? 'Deuda inicial (0 si no debes)' : 'Saldo actual'}><MoneyInput value={f.initial} onChange={(v) => set('initial', v)} /></Field>
       {hasNumber && <Field label={f.type === 'sitp' ? 'Número de la tarjeta (para recargar)' : 'Últimos 4 dígitos (opcional)'}><input className="input" inputMode="numeric" value={f.number} onChange={(e) => set('number', e.target.value)} /></Field>}
-      {(f.type === 'sitp' || f.type === 'credit' || f.type === 'debit') && <Field label="Propietario (opcional)"><input className="input" value={f.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Ej: Mi prima" /></Field>}
+      {f.type !== 'cash' && <Field label="Propietario (opcional)"><input className="input" value={f.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Ej: Mi prima" /></Field>}
       <Field label="Color"><div className="swatches">{ACCOUNT_COLORS.map((c) => <button key={c} className={f.color === c ? 'on' : ''} style={{ background: c }} onClick={() => set('color', c)} />)}</div></Field>
       <label className="check"><input type="checkbox" checked={!!f.locked} onChange={(e) => set('locked', e.target.checked)} /> Dinero apartado: no cuenta como disponible</label>
       <button className="btn primary wide" disabled={!f.name.trim()} onClick={() => { onSave({ type: f.type, name: f.name.trim(), initial: Number(f.initial) || 0, number: f.number || undefined, owner: f.owner || undefined, color: f.color, locked: !!f.locked }); onClose() }}>Guardar</button>

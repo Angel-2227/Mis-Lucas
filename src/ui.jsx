@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function Sheet({ title, onClose, children }) {
-  return (
+  return createPortal(
     <div className="backdrop" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
@@ -11,12 +12,13 @@ export function Sheet({ title, onClose, children }) {
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
 export function Field({ label, children }) {
-  return <label className="field"><span>{label}</span>{children}</label>
+  return <div className="field"><span>{label}</span>{children}</div>
 }
 
 export function MoneyInput({ value, onChange, placeholder = '0' }) {

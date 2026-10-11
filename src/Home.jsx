@@ -1,9 +1,9 @@
-import { Settings as Cog, Wallet, Banknote, CreditCard, Bus, Lock } from 'lucide-react'
+import { Settings as Cog, Wallet, Banknote, CreditCard, Bus, Lock, PiggyBank } from 'lucide-react'
 import { cop, today, monthKey } from './lib'
 import { CopyId, Empty } from './ui'
 import TxRow from './TxRow'
 
-const ICONS = { cash: Banknote, debit: Wallet, credit: CreditCard, sitp: Bus }
+const ICONS = { cash: Banknote, debit: Wallet, savings: PiggyBank, credit: CreditCard, sitp: Bus }
 
 function AccountCard({ a, balance }) {
   const Icon = ICONS[a.type] || Wallet
