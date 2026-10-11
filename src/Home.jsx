@@ -4,6 +4,7 @@ import { cop, today, monthKey, BRANDS } from './lib'
 import { Empty } from './ui'
 import { useGate, CardNumber } from './Vault'
 import TxRow from './TxRow'
+import Mascot from './Mascot'
 
 const TYPE_LABEL = { debit: 'débito', credit: 'crédito', savings: 'ahorros', sitp: 'transporte', cash: '' }
 
@@ -80,6 +81,25 @@ export default function Home({ d, go, openAdd }) {
 
   const recent = [...txs].sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt)).slice(0, 5)
 
+  const hour = new Date().getHours()
+  const hi = hour < 12 ? 'Buenos días' : hour < 19 ? 'Buenas tardes' : 'Buenas noches'
+  const first = d.user.displayName?.split(' ')[0] || ''
+  const spentToday = txs.some((t) => t.date === today() && t.type === 'expense')
+  const lowSitp = settings.fare > 0
+    ? accounts.filter((a) => a.type === 'sitp').map((a) => ({ a, n: Math.floor(d.bal[a.id] / settings.fare) })).find((x) => x.n <= 2)
+    : null
+  const focus = [...d.goals].filter((g) => !g.done).sort((x, y) => (x.order ?? 0) - (y.order ?? 0))[0]
+  const pct = focus ? Math.round(((d.savedByGoal[focus.id] || 0) / focus.target) * 100) : 0
+  let tip = 'Todo al día. Sigue así.'
+  let pose = 'hola'
+  if (pending.length) tip = `Ya puedes registrar tu ${pending[0].name} de este mes.`
+  else if (lowSitp) {
+    const n = Math.max(0, lowSitp.n)
+    tip = `A ${lowSitp.a.name} le ${n === 1 ? 'queda 1 pasaje' : `quedan ${n} pasajes`}. ¿La recargamos?`
+    pose = 'alerta'
+  } else if (!spentToday) tip = 'Hoy no has anotado gastos. Si gastaste algo, anótalo para no olvidarlo.'
+  else if (focus) { tip = `Tu meta "${focus.name}" va en ${pct}%.`; pose = pct >= 100 ? 'feliz' : 'hola' }
+
   return (
     <div className="page">
       {gate}
@@ -87,6 +107,11 @@ export default function Home({ d, go, openAdd }) {
         <div><small>Hola, {d.user.displayName?.split(' ')[0] || 'bienvenido'}</small><h1>Tu bolsillo</h1></div>
         <button className="icon-btn round" onClick={() => go('settings')} aria-label="Ajustes"><Cog size={20} /></button>
       </header>
+
+      <section className="greet">
+        <Mascot pose={pose} size={84} />
+        <div><strong>{hi}{first ? `, ${first}` : ''}</strong><p>{tip}</p></div>
+      </section>
 
       <div className="home-grid">
       <div className="col">

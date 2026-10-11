@@ -1,6 +1,43 @@
 import { useState } from 'react'
 import { cop, today, monthKey, monthLabel, shiftMonth, MONTHS_SHORT } from './lib'
 import { MonthNav, Empty } from './ui'
+import { auth } from './firebase'
+import { buildSummary } from './ai'
+import Mascot from './Mascot'
+
+function AdviceCard({ d }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const ask = async () => {
+    setBusy(true); setErr('')
+    try {
+      const token = await auth.currentUser.getIdToken()
+      const r = await fetch('/api/advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ summary: buildSummary(d) }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j.error || `Error ${r.status}`)
+      if (!j.text) throw new Error('La IA solo funciona en la versión publicada.')
+      setText(j.text)
+    } catch (e) { setErr(e.message) }
+    setBusy(false)
+  }
+  return (
+    <section className="advice-card">
+      <div className="advice-head">
+        <Mascot pose={busy ? 'pensando' : text ? 'feliz' : 'hola'} size={72} />
+        <div><strong>Consejos de ahorro</strong><small>Según tus movimientos de este mes</small></div>
+      </div>
+      {text && <div className="advice">{text.replace(/\*\*/g, '')}</div>}
+      {err && <p className="err">{err}</p>}
+      <button className="btn primary wide" disabled={busy} onClick={ask}>{busy ? 'Pensando...' : text ? 'Pedir otro consejo' : 'Pedir consejo'}</button>
+      <small className="muted">Se envía un resumen de montos, categorías y nombres de metas. Nunca números de tarjeta.</small>
+    </section>
+  )
+}
 
 export default function Analytics({ d }) {
   const [month, setMonth] = useState(monthKey(today()))
@@ -24,6 +61,7 @@ export default function Analytics({ d }) {
   return (
     <div className="page">
       <h1>Análisis</h1>
+      <AdviceCard d={d} />
       <MonthNav month={month} onChange={setMonth} label={monthLabel} shift={shiftMonth} />
 
       <div className="stats-grid">

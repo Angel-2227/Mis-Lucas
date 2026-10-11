@@ -230,3 +230,16 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .err{color:var(--red);font-size:13.5px;margin:10px 2px 0}
 .swatch{background-size:cover}
 @media (min-width:768px){.bcard{flex:0 0 300px}.cards-scroll .bcard{flex:0 0 310px;max-width:none}.cards-scroll.all .bcard{flex:none}}
+
+/* ---------- Mascota, consejos y recordatorios ---------- */
+.mascot{object-fit:contain;flex:none}
+.greet{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:22px;padding:10px 16px 10px 10px;margin-bottom:16px}
+.greet strong{font-family:var(--font-d);font-size:17px}
+.greet p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.advice-card{background:var(--paper);border-radius:var(--r);padding:14px 16px 16px;margin:10px 0 14px}
+.advice-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.advice-head strong{display:block;font-family:var(--font-d);font-size:18px}
+.advice{white-space:pre-wrap;font-size:15px;line-height:1.5;background:var(--bg);border-radius:16px;padding:12px 14px;margin-bottom:6px}
+.advice-card .btn{margin-bottom:8px}
+.remrow{display:flex;gap:8px;align-items:center;margin-top:10px}
+.remrow .input{flex:1;min-width:0}

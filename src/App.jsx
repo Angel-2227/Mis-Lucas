@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
-import { addDoc, collection, deleteDoc, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, deleteField, doc, arrayUnion, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
 import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart } from 'lucide-react'
 import { auth, db, provider } from './firebase'
 import { DEFAULT_SETTINGS, clean, computeBalances } from './lib'
@@ -21,6 +21,13 @@ function useCollection(uid, name) {
     )
   }, [uid, name])
   return items
+}
+
+function usePush(uid) {
+  const [push, setPush] = useState({ reminders: [], tokens: [] })
+  useEffect(() => onSnapshot(doc(db, 'users', uid, 'meta', 'push'), (s) =>
+    setPush({ reminders: [], tokens: [], ...(s.exists() ? s.data() : {}) })), [uid])
+  return push
 }
 
 function useSettings(uid) {
@@ -73,6 +80,7 @@ function Main({ user }) {
   const txs = useCollection(uid, 'transactions')
   const goals = useCollection(uid, 'goals')
   const settings = useSettings(uid)
+  const push = usePush(uid)
   const [tab, setTab] = useState(() => tabFromPath(window.location.pathname))
   const go = (t) => {
     if (ROUTES[t] !== window.location.pathname) window.history.pushState({}, '', ROUTES[t])
@@ -91,6 +99,8 @@ function Main({ user }) {
     update: (name, id, data) => updateDoc(doc(db, 'users', uid, name, id), clean(data)),
     remove: (name, id) => deleteDoc(doc(db, 'users', uid, name, id)),
     saveSettings: (patch) => setDoc(doc(db, 'users', uid, 'meta', 'settings'), patch, { merge: true }),
+    savePush: (patch) => setDoc(doc(db, 'users', uid, 'meta', 'push'), patch, { merge: true }),
+    addToken: (token) => setDoc(doc(db, 'users', uid, 'meta', 'push'), { tokens: arrayUnion(token) }, { merge: true }),
     logout: () => signOut(auth),
   }), [uid])
 
@@ -103,8 +113,8 @@ function Main({ user }) {
     const total = money.reduce((s, a) => s + bal[a.id], 0)
     const physical = money.filter((a) => a.type === 'cash').reduce((s, a) => s + bal[a.id], 0)
     const free = money.filter((a) => !a.locked).reduce((s, a) => s + bal[a.id], 0)
-    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: total - physical, available: free - reserved, api, user }
-  }, [accounts, txs, goals, settings, api, user])
+    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: total - physical, available: free - reserved, api, user, push }
+  }, [accounts, txs, goals, settings, api, user, push])
 
   const [online, setOnline] = useState(navigator.onLine)
   useEffect(() => {
@@ -124,6 +134,14 @@ function Main({ user }) {
   }, [unlocked, accounts, api])
 
   const openAdd = (initial = {}) => setSheet({ initial })
+  // Al abrir desde una notificación (/?add=fare o /?add=expense) se abre el formulario.
+  const pendingAdd = useRef(new URLSearchParams(window.location.search).get('add'))
+  useEffect(() => {
+    if (!pendingAdd.current || accounts.length === 0) return
+    openAdd({ type: pendingAdd.current === 'fare' ? 'fare' : 'expense' })
+    pendingAdd.current = null
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [accounts])
   const nav = [
     ['home', 'Inicio', HomeIcon], ['moves', 'Movimientos', ListOrdered], null,
     ['goals', 'Metas', Target], ['stats', 'Análisis', PieChart],

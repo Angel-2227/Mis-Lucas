@@ -4,6 +4,7 @@ import { deleteField } from 'firebase/firestore'
 import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, BRANDS, NETWORKS, cop } from './lib'
 import { useGate, useUnlocked } from './Vault'
 import * as V from './vault'
+import { enablePush } from './push'
 import { Sheet, Field, MoneyInput, CatDot } from './ui'
 
 function AccountForm({ d, acc, onSave, onDelete, onClose }) {
@@ -73,6 +74,44 @@ function AccountForm({ d, acc, onSave, onDelete, onClose }) {
       <button className="btn primary wide" disabled={!f.name.trim()} onClick={save}>Guardar</button>
       {acc && <button className="btn wide danger" onClick={() => { if (confirm('¿Eliminar cuenta? Sus movimientos quedarán sin cuenta.')) { onDelete(); onClose() } }}>Eliminar cuenta</button>}
     </Sheet>
+  )
+}
+
+function RemindersCard({ d }) {
+  const { api, push } = d
+  const [msg, setMsg] = useState('')
+  const list = push.reminders || []
+  const save = (next) => api.savePush({ reminders: next })
+  const add = (kind, time) => save([...list, { id: 'r' + Date.now(), kind, time, enabled: true }])
+  const upd = (id, patch) => save(list.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  const enable = async () => {
+    setMsg('Activando...')
+    try { await enablePush(api); setMsg('Listo: este dispositivo recibirá los recordatorios.') } catch (e) { setMsg(e.message) }
+  }
+  return (
+    <>
+      <h2>Recordatorios</h2>
+      <div className="list pad">
+        <p className="hint" style={{ marginTop: 0 }}>Te avisamos a la hora que elijas, solo si ese día aún no anotaste gastos o pasajes. Dispositivos activados: {(push.tokens || []).length}.</p>
+        <button className="btn wide" style={{ marginTop: 0 }} onClick={enable}>Activar en este dispositivo</button>
+        {msg && <p className="hint">{msg}</p>}
+        {list.map((r) => (
+          <div className="remrow" key={r.id}>
+            <input className="input" type="time" value={r.time} onChange={(e) => upd(r.id, { time: e.target.value })} />
+            <select className="input" value={r.kind} onChange={(e) => upd(r.id, { kind: e.target.value })}>
+              <option value="gasto">Gastos del día</option>
+              <option value="pasaje">Pasajes</option>
+            </select>
+            <input type="checkbox" checked={!!r.enabled} onChange={(e) => upd(r.id, { enabled: e.target.checked })} aria-label="Activo" />
+            <button className="icon-btn ghost" onClick={() => save(list.filter((x) => x.id !== r.id))}><Trash2 size={16} /></button>
+          </div>
+        ))}
+        <div className="chips" style={{ marginTop: 12 }}>
+          <button className="chip" onClick={() => add('gasto', '20:00')}>+ Gastos 8:00 pm</button>
+          <button className="chip" onClick={() => add('pasaje', '18:00')}>+ Pasajes 6:00 pm</button>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -216,6 +255,7 @@ export default function Settings({ d, back }) {
       </div>
 
       </div>
+      <div className="blk"><RemindersCard d={d} /></div>
       <div className="blk"><SecurityCard d={d} /><InstallCard /></div>
       </div>
 
