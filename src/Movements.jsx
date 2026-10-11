@@ -27,12 +27,14 @@ export default function Movements({ d }) {
       </div>
       <p className="hint">Balance del mes: <b className={total < 0 ? 'neg' : 'pos'}>{cop(total)}</b></p>
       {list.length === 0 && <Empty title="Nada por aquí" text="No hay movimientos en este mes." />}
+      <div className="days">
       {Object.keys(groups).sort().reverse().map((date) => (
         <section key={date}>
           <h4>{dayLabel(date)}</h4>
           <div className="list">{groups[date].map((t) => <TxRow key={t.id} t={t} d={d} onDelete={remove} />)}</div>
         </section>
       ))}
+      </div>
     </div>
   )
 }

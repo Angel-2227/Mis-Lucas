@@ -26,6 +26,8 @@ export default function Analytics({ d }) {
       <h1>Análisis</h1>
       <MonthNav month={month} onChange={setMonth} label={monthLabel} shift={shiftMonth} />
 
+      <div className="stats-grid">
+      <div>
       <section className="hero light">
         <small>Gastado en el mes</small>
         <div className="hero-num">{cop(total)}</div>
@@ -44,6 +46,8 @@ export default function Analytics({ d }) {
         </div>
       )}
 
+      </div>
+      <div>
       <h2>Últimos 6 meses</h2>
       <div className="list pad">
         <div className="legend"><span><i className="dot pos-bg" />Ingresos</span><span><i className="dot neg-bg" />Gastos</span></div>
@@ -58,6 +62,8 @@ export default function Analytics({ d }) {
             </div>
           ))}
         </div>
+      </div>
+      </div>
       </div>
     </div>
   )

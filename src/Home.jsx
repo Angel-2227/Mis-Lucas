@@ -66,6 +66,8 @@ export default function Home({ d, go, openAdd }) {
         <button className="icon-btn round" onClick={() => go('settings')} aria-label="Ajustes"><Cog size={20} /></button>
       </header>
 
+      <div className="home-grid">
+      <div className="col">
       <section className="hero">
         <small>Disponible para gastar</small>
         <div className="hero-num">{cop(d.available)}</div>
@@ -102,6 +104,8 @@ export default function Home({ d, go, openAdd }) {
         </>
       )}
 
+      </div>
+      <div className="col">
       {pending.map((r) => (
         <div className="pending" key={r.id}>
           <div><strong>{r.name} de este mes</strong><small>{cop(r.amount)} sin registrar</small></div>
@@ -120,6 +124,8 @@ export default function Home({ d, go, openAdd }) {
       <div className="list">
         {recent.length === 0 ? <Empty title="Sin movimientos" text="Toca el botón + para registrar el primero." />
           : recent.map((t) => <TxRow key={t.id} t={t} d={d} />)}
+      </div>
+      </div>
       </div>
     </div>
   )

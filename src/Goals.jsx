@@ -61,6 +61,7 @@ export default function Goals({ d, openAdd }) {
     <div className="page">
       <header className="top"><h1>Metas</h1><button className="btn small primary" onClick={() => setForm(true)}><Plus size={16} /> Meta</button></header>
       {active.length === 0 && <Empty title="Sin metas activas" text="Agrega lo que quieres comprar y ordénalo por prioridad." />}
+      <div className="goals-grid">
       {active.map((g, i) => {
         const saved = d.savedByGoal[g.id] || 0
         const left = Math.max(0, g.target - saved)
@@ -89,6 +90,7 @@ export default function Goals({ d, openAdd }) {
           </div>
         )
       })}
+      </div>
       {done.length > 0 && <>
         <h2>Compradas</h2>
         <div className="list">{done.map((g) => (

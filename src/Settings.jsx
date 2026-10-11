@@ -94,6 +94,8 @@ export default function Settings({ d, back }) {
     <div className="page">
       <header className="top"><button className="icon-btn round" onClick={back}><ChevronLeft size={20} /></button><h1>Ajustes</h1><span /></header>
 
+      <div className="settings-grid">
+      <div className="blk">
       <div className="sec-head"><h2>Cuentas y tarjetas</h2><button className="btn small primary" onClick={() => setAccForm({})}><Plus size={16} /> Agregar</button></div>
       <div className="list">
         {d.accounts.length === 0 && <p className="hint pad">Agrega efectivo, débito, crédito o SITP.</p>}
@@ -106,6 +108,8 @@ export default function Settings({ d, back }) {
         ))}
       </div>
 
+      </div>
+      <div className="blk">
       <h2>Pasaje de transporte</h2>
       <div className="list"><div className="row">
         <div className="row-main"><strong>Valor del pasaje</strong><small>Se usa para contar pasajes en tus tarjetas SITP</small></div>
@@ -113,6 +117,8 @@ export default function Settings({ d, back }) {
         <button className="btn small primary" disabled={!Number(fare)} onClick={() => api.saveSettings({ fare: Number(fare) })}>Guardar</button>
       </div></div>
 
+      </div>
+      <div className="blk">
       <div className="sec-head"><h2>Ingresos recurrentes</h2><button className="btn small primary" onClick={() => setRecForm({})}><Plus size={16} /> Agregar</button></div>
       <div className="list">
         {settings.recurring.map((r) => (
@@ -123,6 +129,8 @@ export default function Settings({ d, back }) {
         ))}
       </div>
 
+      </div>
+      <div className="blk">
       <h2>Categorías de gasto</h2>
       <div className="list">
         {settings.categories.map((c) => (
@@ -139,7 +147,9 @@ export default function Settings({ d, back }) {
         </div>
       </div>
 
-      <InstallCard />
+      </div>
+      <div className="blk"><InstallCard /></div>
+      </div>
 
       <button className="btn wide" onClick={api.logout}><LogOut size={16} /> Cerrar sesión</button>
 

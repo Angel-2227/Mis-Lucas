@@ -127,10 +127,11 @@ function Main({ user }) {
         {tab === 'settings' && <Settings d={d} back={() => go('home')} />}
       </main>
       <nav className="bottom-nav">
+        <div className="brand"><b>M</b><span>Mis Lucas</span></div>
         {nav.map((n, i) => n ? (
           <NavBtn key={n[0]} id={n[0]} label={n[1]} Icon={n[2]} on={tab === n[0]} onClick={() => go(n[0])} />
         ) : (
-          <button key={i} className="fab" onClick={() => openAdd()} aria-label="Agregar movimiento"><Plus size={28} /></button>
+          <button key={i} className="fab" onClick={() => openAdd()} aria-label="Agregar movimiento"><Plus size={26} /><span className="fab-label">Nuevo movimiento</span></button>
         ))}
       </nav>
       {sheet && <AddSheet d={d} initial={sheet.initial} onClose={() => setSheet(null)} />}
