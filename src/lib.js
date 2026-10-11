@@ -41,6 +41,7 @@ export const DEFAULT_SETTINGS = {
   skipped: [],
   fare: 3550,
   pinned: null,
+  vault: null,
 }
 
 export const ACCOUNT_TYPES = { cash: 'Efectivo', debit: 'Débito', savings: 'Ahorros', credit: 'Crédito', sitp: 'SITP' }
@@ -60,3 +61,13 @@ export function computeBalances(accounts, txs) {
   })
   return b
 }
+
+export const BRANDS = {
+  nu: { label: 'Nu', cls: 'b-nu' },
+  davivienda: { label: 'Davivienda', cls: 'b-davi' },
+  daviplata: { label: 'DaviPlata', cls: 'b-daviplata' },
+  nequi: { label: 'Nequi', cls: 'b-nequi' },
+  tullave: { label: 'TuLlave', cls: 'b-tullave' },
+  cash: { label: 'Plata física', cls: 'b-cash' },
+}
+export const NETWORKS = { '': 'Ninguna', mastercard: 'Mastercard', visa: 'Visa' }

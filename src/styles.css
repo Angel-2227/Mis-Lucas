@@ -189,3 +189,44 @@ small,.muted{color:var(--muted);font-size:12.5px}
   .bottom-nav .fab{width:100%;height:auto;border-radius:16px;padding:14px;flex-direction:row;gap:10px;font-size:15px;font-weight:600}
   .fab-label{display:inline}
 }
+
+/* ---------- Tarjetas estilo bancario ---------- */
+.b-nu{background:radial-gradient(circle at 88% 12%,#ffffff26,transparent 42%),linear-gradient(135deg,#9B4FE0,#6A2BAE)}
+.b-davi{background:radial-gradient(circle at 92% 95%,#0000002e 0 24%,transparent 25%),linear-gradient(135deg,#E8272C,#B3111A)}
+.b-daviplata{background:radial-gradient(circle at 100% 100%,#00000026 0 38%,transparent 39%),linear-gradient(135deg,#DD2027,#A80F18)}
+.b-nequi{background:linear-gradient(315deg,#E6139E 0 15%,transparent 15.1%),linear-gradient(135deg,#19D3E6 0 9%,transparent 9.1%),#1C0640}
+.b-tullave{background:radial-gradient(circle at 100% 100%,#ffffff14 0 42%,transparent 43%),radial-gradient(circle at 100% 100%,#ffffff0e 0 62%,transparent 63%),linear-gradient(135deg,#0B5BD6,#07409F)}
+.b-cash{background:linear-gradient(135deg,#6368BD,#3F4392)}
+.bcard.b-custom{background:linear-gradient(135deg,#ffffff1c,#00000030),var(--c)}
+
+.bcard{position:relative;overflow:hidden;color:#fff;border-radius:22px;padding:16px 18px;aspect-ratio:1.586;min-height:178px;display:grid;grid-template-rows:auto 1fr auto;box-shadow:0 10px 24px #0e1b142e}
+.cards-scroll .bcard{flex:0 0 78%;max-width:320px;scroll-snap-align:start}
+.cards-scroll.all .bcard{max-width:none}
+.bcard-top,.bcard-bot{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+.bcard-bot{align-items:flex-end}
+.bcard-icons{display:flex;align-items:center;gap:6px}
+.wordmark{display:block;font:800 21px var(--font-d);letter-spacing:-.02em}
+.b-nu .wordmark{text-transform:lowercase;font-size:30px;line-height:.9}
+.b-cash .wordmark{font-size:17px}
+.bname{display:block;color:#ffffffb3;font-size:12px}
+.bcard-mid{display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;z-index:1}
+.bcard-mid small{color:#ffffffb3;font-size:11.5px}
+.bcard-bal{font:700 27px var(--font-d);letter-spacing:-.02em}
+.chip-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.chip-ic{width:34px;height:25px;border-radius:6px;background:linear-gradient(135deg,#e9e9ec,#a9a9b0);box-shadow:inset 0 0 0 1px #00000026}
+.nfc{transform:rotate(90deg);opacity:.9}
+.watermark{position:absolute;right:-14px;bottom:-14px;opacity:.16;transform:rotate(-12deg)}
+.bcard .fare-line{margin-top:6px}
+.cnum{display:flex;align-items:center;gap:2px;font:600 14px var(--font-b);letter-spacing:.08em}
+.cnum button{color:inherit;opacity:.85;display:grid;place-items:center;width:26px;height:26px;border-radius:50%}
+.owner{display:block;color:#ffffffcc;font-size:12.5px;margin-top:2px}
+.bcard-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.bcard-right small{color:#ffffffcc;font-size:12px}
+.mc{display:inline-flex}
+.mc i{width:24px;height:24px;border-radius:50%;background:#EB001B}
+.mc i+i{background:#F79E1B;margin-left:-9px;opacity:.95}
+.visa{font:italic 800 19px var(--font-d);letter-spacing:.02em}
+.numline{display:flex;align-items:center;justify-content:space-between;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:6px 8px 6px 14px}
+.err{color:var(--red);font-size:13.5px;margin:10px 2px 0}
+.swatch{background-size:cover}
+@media (min-width:768px){.bcard{flex:0 0 300px}.cards-scroll .bcard{flex:0 0 310px;max-width:none}.cards-scroll.all .bcard{flex:none}}

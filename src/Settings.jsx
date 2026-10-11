@@ -1,27 +1,95 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, Plus, Trash2, LogOut } from 'lucide-react'
-import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, cop } from './lib'
+import { deleteField } from 'firebase/firestore'
+import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, BRANDS, NETWORKS, cop } from './lib'
+import { useGate, useUnlocked } from './Vault'
+import * as V from './vault'
 import { Sheet, Field, MoneyInput, CatDot } from './ui'
 
-function AccountForm({ acc, onSave, onDelete, onClose }) {
-  const [f, setF] = useState({ type: 'debit', name: '', number: '', owner: '', locked: false, color: ACCOUNT_COLORS[0], ...acc, initial: String(acc?.initial ?? '') })
+function AccountForm({ d, acc, onSave, onDelete, onClose }) {
+  const [f, setF] = useState({ type: 'debit', name: '', owner: '', locked: false, color: ACCOUNT_COLORS[0], brand: '', network: '', ...acc, initial: String(acc?.initial ?? '') })
+  const [editNum, setEditNum] = useState(false)
+  const [numInput, setNumInput] = useState('')
+  const [run, gate] = useGate(d)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
-  const hasNumber = f.type !== 'cash'
+  const last4 = acc?.last4 || (acc?.number ? String(acc.number).slice(-4) : '')
+  const isCard = f.type !== 'cash'
+
+  const save = async () => {
+    const data = { type: f.type, name: f.name.trim(), initial: Number(f.initial) || 0, owner: f.owner || '', color: f.color, locked: !!f.locked, brand: f.brand || '', network: isCard ? f.network || '' : '' }
+    if (editNum) {
+      const digits = numInput.replace(/\D/g, '')
+      if (digits && digits.length < 4) return alert('El número debe tener al menos 4 dígitos.')
+      try {
+        data.numberEnc = digits ? await V.encryptText(digits) : ''
+        data.last4 = digits.slice(-4)
+      } catch { return alert('La sesión de seguridad expiró. Desbloquea de nuevo.') }
+    }
+    onSave(data)
+    onClose()
+  }
+
   return (
     <Sheet title={acc ? 'Editar cuenta' : 'Nueva cuenta'} onClose={onClose}>
+      {gate}
       <Field label="Tipo">
         <div className="seg">{Object.entries(ACCOUNT_TYPES).map(([k, l]) => <button key={k} className={f.type === k ? 'on' : ''} onClick={() => set('type', k)}>{l}</button>)}</div>
       </Field>
-      <Field label="Nombre"><input className="input" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.type === 'sitp' ? 'SITP mía' : f.type === 'savings' ? 'Nequi' : 'Cuenta'} /></Field>
-      <Field label={f.type === 'credit' ? 'Deuda inicial (0 si no debes)' : 'Saldo actual'}><MoneyInput value={f.initial} onChange={(v) => set('initial', v)} allowNegative={f.type === 'sitp'} /></Field>
+      <Field label="Nombre"><input className="input" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.type === 'sitp' ? 'TuLlave mía' : f.type === 'savings' ? 'Nequi' : 'Cuenta'} /></Field>
+      <Field label="Estilo de tarjeta">
+        <div className="chips">
+          {[['', 'Otro'], ...Object.entries(BRANDS).map(([k, v]) => [k, v.label])].map(([k, l]) => (
+            <button key={k} className={'chip' + (f.brand === k ? ' on' : '')} onClick={() => set('brand', k)}>{l}</button>
+          ))}
+        </div>
+      </Field>
+      {!f.brand && f.type !== 'cash' && (
+        <Field label="Color"><div className="swatches">{ACCOUNT_COLORS.map((c) => <button key={c} className={f.color === c ? 'on' : ''} style={{ background: c }} onClick={() => set('color', c)} />)}</div></Field>
+      )}
+      <Field label={f.type === 'credit' ? 'Deuda inicial (0 si no debes)' : 'Saldo actual'}>
+        <MoneyInput value={f.initial} onChange={(v) => set('initial', v)} allowNegative={f.type === 'sitp'} />
+      </Field>
       {f.type === 'sitp' && <label className="check"><input type="checkbox" checked={String(f.initial).startsWith('-')} onChange={(e) => set('initial', (e.target.checked ? '-' : '') + String(f.initial).replace(/\D/g, ''))} /> Saldo negativo</label>}
-      {hasNumber && <Field label={f.type === 'sitp' ? 'Número de la tarjeta (para recargar)' : 'Últimos 4 dígitos (opcional)'}><input className="input" inputMode="numeric" value={f.number} onChange={(e) => set('number', e.target.value)} /></Field>}
-      {f.type !== 'cash' && <Field label="Propietario (opcional)"><input className="input" value={f.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Ej: Mi prima" /></Field>}
-      <Field label="Color"><div className="swatches">{ACCOUNT_COLORS.map((c) => <button key={c} className={f.color === c ? 'on' : ''} style={{ background: c }} onClick={() => set('color', c)} />)}</div></Field>
+      {isCard && (
+        <>
+          <Field label={f.type === 'sitp' ? 'Número de la tarjeta (para recargar)' : 'Número de tarjeta'}>
+            {editNum ? (
+              <input className="input" inputMode="numeric" autoFocus placeholder="Número completo" value={numInput} onChange={(e) => setNumInput(e.target.value)} />
+            ) : (
+              <div className="numline">
+                <span>{last4 ? `•••• ${last4}` : 'Sin número'}</span>
+                <button type="button" className="btn small" onClick={() => run(() => setEditNum(true))}>{last4 ? 'Cambiar' : 'Agregar'}</button>
+              </div>
+            )}
+          </Field>
+          <p className="hint">Se guarda cifrado y se muestra completo solo al desbloquear con tu clave.</p>
+          <Field label="Propietario (opcional)"><input className="input" value={f.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Ej: Mi prima" /></Field>
+          <Field label="Red">
+            <div className="seg">{Object.entries(NETWORKS).map(([k, l]) => <button key={k} className={(f.network || '') === k ? 'on' : ''} onClick={() => set('network', k)}>{l}</button>)}</div>
+          </Field>
+        </>
+      )}
       <label className="check"><input type="checkbox" checked={!!f.locked} onChange={(e) => set('locked', e.target.checked)} /> Dinero apartado: no cuenta como disponible</label>
-      <button className="btn primary wide" disabled={!f.name.trim()} onClick={() => { onSave({ type: f.type, name: f.name.trim(), initial: Number(f.initial) || 0, number: f.number || undefined, owner: f.owner || undefined, color: f.color, locked: !!f.locked }); onClose() }}>Guardar</button>
+      <button className="btn primary wide" disabled={!f.name.trim()} onClick={save}>Guardar</button>
       {acc && <button className="btn wide danger" onClick={() => { if (confirm('¿Eliminar cuenta? Sus movimientos quedarán sin cuenta.')) { onDelete(); onClose() } }}>Eliminar cuenta</button>}
     </Sheet>
+  )
+}
+
+function SecurityCard({ d }) {
+  const unlocked = useUnlocked()
+  const [run, gate] = useGate(d)
+  return (
+    <>
+      <h2>Seguridad</h2>
+      <div className="list pad">
+        {gate}
+        <p className="hint" style={{ marginTop: 0 }}>Los números de tarjeta se guardan cifrados y se ven completos solo al desbloquear con tu clave, por 10 minutos o hasta cerrar la app.</p>
+        {unlocked
+          ? <button className="btn wide" onClick={V.lock}>Bloquear ahora</button>
+          : <button className="btn wide" onClick={() => run(() => {})}>{d.settings.vault ? 'Desbloquear' : 'Crear clave de seguridad'}</button>}
+      </div>
+    </>
   )
 }
 
@@ -101,7 +169,7 @@ export default function Settings({ d, back }) {
         {d.accounts.length === 0 && <p className="hint pad">Agrega efectivo, débito, crédito o SITP.</p>}
         {d.accounts.map((a) => (
           <button className="row btn-row" key={a.id} onClick={() => setAccForm(a)}>
-            <span className="swatch" style={{ background: a.color }} />
+            <span className={'swatch ' + (BRANDS[a.brand || (a.type === 'cash' ? 'cash' : '')]?.cls || '')} style={BRANDS[a.brand || (a.type === 'cash' ? 'cash' : '')] ? undefined : { background: a.color }} />
             <div className="row-main"><strong>{a.name}</strong><small>{ACCOUNT_TYPES[a.type]}{a.owner ? ` - ${a.owner}` : ''}{a.locked ? ' - apartada' : ''}</small></div>
             <b className="amt">{cop(d.bal[a.id])}</b>
           </button>
@@ -148,13 +216,13 @@ export default function Settings({ d, back }) {
       </div>
 
       </div>
-      <div className="blk"><InstallCard /></div>
+      <div className="blk"><SecurityCard d={d} /><InstallCard /></div>
       </div>
 
       <button className="btn wide" onClick={api.logout}><LogOut size={16} /> Cerrar sesión</button>
 
-      {accForm && <AccountForm acc={accForm.id ? accForm : null} onClose={() => setAccForm(null)}
-        onSave={(data) => (accForm.id ? api.update('accounts', accForm.id, data) : api.add('accounts', data))}
+      {accForm && <AccountForm d={d} acc={accForm.id ? accForm : null} onClose={() => setAccForm(null)}
+        onSave={(data) => (accForm.id ? api.update('accounts', accForm.id, 'numberEnc' in data ? { ...data, number: deleteField() } : data) : api.add('accounts', data))}
         onDelete={() => api.remove('accounts', accForm.id)} />}
       {recForm && <RecurringForm r={recForm.id ? recForm : null} d={d} onClose={() => setRecForm(null)} onSave={saveRec}
         onDelete={() => api.saveSettings({ recurring: settings.recurring.filter((x) => x.id !== recForm.id) })} />}

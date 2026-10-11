@@ -1,31 +1,51 @@
 import { useState } from 'react'
-import { Pin, Settings as Cog, Wallet, Banknote, CreditCard, Bus, Lock, PiggyBank } from 'lucide-react'
-import { cop, today, monthKey } from './lib'
-import { CopyId, Empty } from './ui'
+import { Pin, Settings as Cog, Banknote, Lock, Wifi } from 'lucide-react'
+import { cop, today, monthKey, BRANDS } from './lib'
+import { Empty } from './ui'
+import { useGate, CardNumber } from './Vault'
 import TxRow from './TxRow'
 
-const ICONS = { cash: Banknote, debit: Wallet, savings: PiggyBank, credit: CreditCard, sitp: Bus }
+const TYPE_LABEL = { debit: 'débito', credit: 'crédito', savings: 'ahorros', sitp: 'transporte', cash: '' }
 
-function AccountCard({ a, balance, fare, onFare, pinned, onPin }) {
-  const Icon = ICONS[a.type] || Wallet
+function Network({ n }) {
+  if (n === 'mastercard') return <span className="mc"><i /><i /></span>
+  if (n === 'visa') return <b className="visa">VISA</b>
+  return null
+}
+
+function AccountCard({ a, balance, fare, onFare, pinned, onPin, run }) {
+  const b = BRANDS[a.brand || (a.type === 'cash' ? 'cash' : '')]
+  const isCash = a.type === 'cash'
+  const showName = b && a.name.trim().toLowerCase() !== b.label.toLowerCase()
   return (
-    <div className="acard" style={{ background: a.color || '#13241B' }}>
-      <div className="acard-top">
-        <Icon size={20} />
-        <span>{a.name}</span>
-        {a.locked && <Lock size={14} />}
-        <button className="pin" onClick={onPin} aria-label={pinned ? 'Quitar de inicio' : 'Fijar en inicio'}><Pin size={16} fill={pinned ? 'currentColor' : 'none'} /></button>
-      </div>
-      <div className="acard-bal">{cop(balance)}</div>
-      {a.type === 'sitp' && fare > 0 && (
-        <div className="fare-line">
-          <span>{Math.max(0, Math.floor(balance / fare))} pasajes de {cop(fare)}</span>
-          <button className="btn small" onClick={onFare}>Usar pasaje</button>
+    <div className={'bcard ' + (b ? b.cls : 'b-custom')} style={b ? undefined : { '--c': a.color || '#13241B' }}>
+      {isCash && <Banknote className="watermark" size={120} />}
+      <div className="bcard-top">
+        <div><span className="wordmark">{b ? b.label : a.name}</span>{showName && <small className="bname">{a.name}</small>}</div>
+        <div className="bcard-icons">
+          {a.locked && <Lock size={14} />}
+          <button className="pin" onClick={onPin} aria-label={pinned ? 'Quitar de inicio' : 'Fijar en inicio'}><Pin size={16} fill={pinned ? 'currentColor' : 'none'} /></button>
         </div>
-      )}
-      <div className="acard-bot">
-        <span>{a.owner || (a.type === 'credit' ? 'Deuda actual' : '')}</span>
-        {a.number && <CopyId text={a.number} />}
+      </div>
+      <div className="bcard-mid">
+        <small>{a.type === 'credit' ? 'Deuda actual' : 'Disponible'}</small>
+        <div className="bcard-bal">{cop(balance)}</div>
+        {a.type === 'sitp' && fare > 0 ? (
+          <div className="fare-line">
+            <span>{Math.max(0, Math.floor(balance / fare))} pasajes de {cop(fare)}</span>
+            <button className="btn small" onClick={onFare}>Usar pasaje</button>
+          </div>
+        ) : !isCash && <div className="chip-row"><i className="chip-ic" /><Wifi size={18} className="nfc" /></div>}
+      </div>
+      <div className="bcard-bot">
+        <div>
+          <CardNumber a={a} run={run} />
+          {a.owner && <span className="owner">{a.owner}</span>}
+        </div>
+        <div className="bcard-right">
+          {TYPE_LABEL[a.type] && <small>{TYPE_LABEL[a.type]}</small>}
+          <Network n={a.network} />
+        </div>
       </div>
     </div>
   )
@@ -34,6 +54,7 @@ function AccountCard({ a, balance, fare, onFare, pinned, onPin }) {
 export default function Home({ d, go, openAdd }) {
   const { accounts, txs, settings, api } = d
   const [showAll, setShowAll] = useState(false)
+  const [run, gate] = useGate(d)
   const defaultIds = [...accounts].sort((a, b) => d.bal[b.id] - d.bal[a.id]).slice(0, 2).map((a) => a.id)
   const pinnedIds = settings.pinned ?? defaultIds
   const visible = showAll ? accounts : accounts.filter((a) => pinnedIds.includes(a.id))
@@ -61,6 +82,7 @@ export default function Home({ d, go, openAdd }) {
 
   return (
     <div className="page">
+      {gate}
       <header className="top">
         <div><small>Hola, {d.user.displayName?.split(' ')[0] || 'bienvenido'}</small><h1>Tu bolsillo</h1></div>
         <button className="icon-btn round" onClick={() => go('settings')} aria-label="Ajustes"><Cog size={20} /></button>
@@ -95,7 +117,7 @@ export default function Home({ d, go, openAdd }) {
           {visible.length === 0 ? <p className="hint">No hay tarjetas fijadas. Toca "Ver todas" y fija las que quieras con el alfiler.</p> : (
             <div className={'cards-scroll' + (showAll ? ' all' : '')}>
               {visible.map((a) => (
-                <AccountCard key={a.id} a={a} balance={d.bal[a.id]} fare={settings.fare}
+                <AccountCard key={a.id} a={a} run={run} balance={d.bal[a.id]} fare={settings.fare}
                   pinned={pinnedIds.includes(a.id)} onPin={() => togglePin(a.id)}
                   onFare={() => openAdd({ type: 'fare', accountId: a.id })} />
               ))}

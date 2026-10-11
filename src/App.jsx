@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
-import { addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
 import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart } from 'lucide-react'
 import { auth, db, provider } from './firebase'
 import { DEFAULT_SETTINGS, clean, computeBalances } from './lib'
@@ -10,6 +10,8 @@ import Goals from './Goals'
 import Analytics from './Analytics'
 import Settings from './Settings'
 import AddSheet from './AddSheet'
+import { useUnlocked } from './Vault'
+import { encryptText } from './vault'
 
 function useCollection(uid, name) {
   const [items, setItems] = useState([])
@@ -110,6 +112,17 @@ function Main({ user }) {
     window.addEventListener('online', on); window.addEventListener('offline', off)
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
   }, [])
+  const unlocked = useUnlocked()
+  useEffect(() => {
+    if (!unlocked) return
+    accounts.filter((a) => a.number && !a.numberEnc).forEach(async (a) => {
+      try {
+        const digits = String(a.number).replace(/\D/g, '')
+        api.update('accounts', a.id, { numberEnc: await encryptText(digits), last4: digits.slice(-4), number: deleteField() })
+      } catch { /* se reintenta al desbloquear de nuevo */ }
+    })
+  }, [unlocked, accounts, api])
+
   const openAdd = (initial = {}) => setSheet({ initial })
   const nav = [
     ['home', 'Inicio', HomeIcon], ['moves', 'Movimientos', ListOrdered], null,
