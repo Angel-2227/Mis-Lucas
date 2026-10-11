@@ -34,8 +34,18 @@ function useSettings(uid) {
   return settings
 }
 
-function NavBtn({ label, Icon, on, onClick }) {
-  return <button className={on ? 'on' : ''} onClick={onClick}><Icon size={22} /><span>{label}</span></button>
+const ROUTES = { home: '/', moves: '/movimientos', goals: '/metas', stats: '/analisis', settings: '/ajustes' }
+const tabFromPath = (p) => {
+  const clean = p.replace(/\/+$/, '') || '/'
+  return Object.keys(ROUTES).find((k) => ROUTES[k] === clean) || 'home'
+}
+
+function NavBtn({ id, label, Icon, on, onClick }) {
+  return (
+    <a href={ROUTES[id]} className={on ? 'on' : ''} onClick={(e) => { e.preventDefault(); onClick() }}>
+      <Icon size={22} /><span>{label}</span>
+    </a>
+  )
 }
 
 function Login() {
@@ -55,7 +65,17 @@ function Main({ user }) {
   const txs = useCollection(uid, 'transactions')
   const goals = useCollection(uid, 'goals')
   const settings = useSettings(uid)
-  const [tab, setTab] = useState('home')
+  const [tab, setTab] = useState(() => tabFromPath(window.location.pathname))
+  const go = (t) => {
+    if (ROUTES[t] !== window.location.pathname) window.history.pushState({}, '', ROUTES[t])
+    setTab(t)
+    window.scrollTo(0, 0)
+  }
+  useEffect(() => {
+    const onPop = () => setTab(tabFromPath(window.location.pathname))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
   const [sheet, setSheet] = useState(null) // { initial }
 
   const api = useMemo(() => ({
@@ -87,15 +107,15 @@ function Main({ user }) {
   return (
     <div className="app">
       <main>
-        {tab === 'home' && <Home d={d} go={setTab} openAdd={openAdd} />}
+        {tab === 'home' && <Home d={d} go={go} openAdd={openAdd} />}
         {tab === 'moves' && <Movements d={d} />}
         {tab === 'goals' && <Goals d={d} openAdd={openAdd} />}
         {tab === 'stats' && <Analytics d={d} />}
-        {tab === 'settings' && <Settings d={d} back={() => setTab('home')} />}
+        {tab === 'settings' && <Settings d={d} back={() => go('home')} />}
       </main>
       <nav className="bottom-nav">
         {nav.map((n, i) => n ? (
-          <NavBtn key={n[0]} id={n[0]} label={n[1]} Icon={n[2]} on={tab === n[0]} onClick={() => setTab(n[0])} />
+          <NavBtn key={n[0]} id={n[0]} label={n[1]} Icon={n[2]} on={tab === n[0]} onClick={() => go(n[0])} />
         ) : (
           <button key={i} className="fab" onClick={() => openAdd()} aria-label="Agregar movimiento"><Plus size={28} /></button>
         ))}
