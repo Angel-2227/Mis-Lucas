@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
 import { addDoc, collection, deleteDoc, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
 import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart } from 'lucide-react'
 import { auth, db, provider } from './firebase'
@@ -48,13 +48,19 @@ function NavBtn({ id, label, Icon, on, onClick }) {
   )
 }
 
+async function login() {
+  try { await signInWithPopup(auth, provider) } catch (e) {
+    if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment'].includes(e.code)) signInWithRedirect(auth, provider)
+  }
+}
+
 function Login() {
   return (
     <div className="login">
       <div className="login-mark">B</div>
       <h1>Bolsillo</h1>
       <p>Tus ingresos, gastos y metas en un solo lugar.</p>
-      <button className="btn primary" onClick={() => signInWithPopup(auth, provider)}>Entrar con Google</button>
+      <button className="btn primary" onClick={login}>Entrar con Google</button>
     </div>
   )
 }
@@ -98,6 +104,12 @@ function Main({ user }) {
     return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: total - physical, available: free - reserved, api, user }
   }, [accounts, txs, goals, settings, api, user])
 
+  const [online, setOnline] = useState(navigator.onLine)
+  useEffect(() => {
+    const on = () => setOnline(true), off = () => setOnline(false)
+    window.addEventListener('online', on); window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
   const openAdd = (initial = {}) => setSheet({ initial })
   const nav = [
     ['home', 'Inicio', HomeIcon], ['moves', 'Movimientos', ListOrdered], null,
@@ -106,6 +118,7 @@ function Main({ user }) {
 
   return (
     <div className="app">
+      {!online && <div className="offline">Sin conexión. Tus cambios se guardan y se sincronizan al volver.</div>}
       <main>
         {tab === 'home' && <Home d={d} go={go} openAdd={openAdd} />}
         {tab === 'moves' && <Movements d={d} />}

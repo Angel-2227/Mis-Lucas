@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronLeft, Plus, Trash2, LogOut } from 'lucide-react'
 import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, cop } from './lib'
 import { Sheet, Field, MoneyInput, CatDot } from './ui'
@@ -44,6 +44,31 @@ function RecurringForm({ r, d, onSave, onDelete, onClose }) {
       <button className="btn primary wide" disabled={!f.name.trim() || !Number(f.amount)} onClick={() => { onSave({ id: f.id || 'r' + Date.now(), name: f.name.trim(), amount: Number(f.amount), accountId: f.accountId, skipMonths: f.skipMonths }); onClose() }}>Guardar</button>
       {r && <button className="btn wide danger" onClick={() => { onDelete(); onClose() }}>Eliminar</button>}
     </Sheet>
+  )
+}
+
+function InstallCard() {
+  const [ready, setReady] = useState(!!window.__installPrompt)
+  useEffect(() => {
+    const on = () => setReady(true)
+    window.addEventListener('install-ready', on)
+    return () => window.removeEventListener('install-ready', on)
+  }, [])
+  if (window.matchMedia('(display-mode: standalone)').matches || navigator.standalone) return null
+  const install = async () => {
+    const p = window.__installPrompt
+    if (!p) return
+    p.prompt(); await p.userChoice
+    window.__installPrompt = null; setReady(false)
+  }
+  return (
+    <>
+      <h2>Instalar app</h2>
+      <div className="list pad">
+        {ready && <button className="btn primary wide" style={{ marginTop: 0 }} onClick={install}>Instalar en este dispositivo</button>}
+        <p className="hint">Android o PC (Chrome): menú del navegador > Instalar app. iPhone o iPad (Safari): botón Compartir > Añadir a pantalla de inicio.</p>
+      </div>
+    </>
   )
 }
 
@@ -113,6 +138,8 @@ export default function Settings({ d, back }) {
           <button className="btn small primary" onClick={addCat}>Añadir</button>
         </div>
       </div>
+
+      <InstallCard />
 
       <button className="btn wide" onClick={api.logout}><LogOut size={16} /> Cerrar sesión</button>
 
