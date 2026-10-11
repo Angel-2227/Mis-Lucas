@@ -13,7 +13,8 @@ function AccountForm({ acc, onSave, onDelete, onClose }) {
         <div className="seg">{Object.entries(ACCOUNT_TYPES).map(([k, l]) => <button key={k} className={f.type === k ? 'on' : ''} onClick={() => set('type', k)}>{l}</button>)}</div>
       </Field>
       <Field label="Nombre"><input className="input" value={f.name} onChange={(e) => set('name', e.target.value)} placeholder={f.type === 'sitp' ? 'SITP mía' : f.type === 'savings' ? 'Nequi' : 'Cuenta'} /></Field>
-      <Field label={f.type === 'credit' ? 'Deuda inicial (0 si no debes)' : 'Saldo actual'}><MoneyInput value={f.initial} onChange={(v) => set('initial', v)} /></Field>
+      <Field label={f.type === 'credit' ? 'Deuda inicial (0 si no debes)' : 'Saldo actual'}><MoneyInput value={f.initial} onChange={(v) => set('initial', v)} allowNegative={f.type === 'sitp'} /></Field>
+      {f.type === 'sitp' && <label className="check"><input type="checkbox" checked={String(f.initial).startsWith('-')} onChange={(e) => set('initial', (e.target.checked ? '-' : '') + String(f.initial).replace(/\D/g, ''))} /> Saldo negativo</label>}
       {hasNumber && <Field label={f.type === 'sitp' ? 'Número de la tarjeta (para recargar)' : 'Últimos 4 dígitos (opcional)'}><input className="input" inputMode="numeric" value={f.number} onChange={(e) => set('number', e.target.value)} /></Field>}
       {f.type !== 'cash' && <Field label="Propietario (opcional)"><input className="input" value={f.owner} onChange={(e) => set('owner', e.target.value)} placeholder="Ej: Mi prima" /></Field>}
       <Field label="Color"><div className="swatches">{ACCOUNT_COLORS.map((c) => <button key={c} className={f.color === c ? 'on' : ''} style={{ background: c }} onClick={() => set('color', c)} />)}</div></Field>
@@ -50,6 +51,7 @@ export default function Settings({ d, back }) {
   const { api, settings } = d
   const [accForm, setAccForm] = useState(null)   // {} nuevo | cuenta
   const [recForm, setRecForm] = useState(null)
+  const [fare, setFare] = useState(String(settings.fare ?? 3550))
   const [catName, setCatName] = useState('')
   const [catColor, setCatColor] = useState('#2F80ED')
 
@@ -78,6 +80,13 @@ export default function Settings({ d, back }) {
           </button>
         ))}
       </div>
+
+      <h2>Pasaje de transporte</h2>
+      <div className="list"><div className="row">
+        <div className="row-main"><strong>Valor del pasaje</strong><small>Se usa para contar pasajes en tus tarjetas SITP</small></div>
+        <div style={{ width: 120 }}><MoneyInput value={fare} onChange={setFare} /></div>
+        <button className="btn small primary" disabled={!Number(fare)} onClick={() => api.saveSettings({ fare: Number(fare) })}>Guardar</button>
+      </div></div>
 
       <div className="sec-head"><h2>Ingresos recurrentes</h2><button className="btn small primary" onClick={() => setRecForm({})}><Plus size={16} /> Agregar</button></div>
       <div className="list">

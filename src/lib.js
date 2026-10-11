@@ -39,6 +39,7 @@ export const DEFAULT_SETTINGS = {
   categories: DEFAULT_CATEGORIES,
   recurring: [{ id: 'beca', name: 'Beca', amount: 800000, accountId: '', skipMonths: [1, 7] }],
   skipped: [],
+  fare: 3550,
 }
 
 export const ACCOUNT_TYPES = { cash: 'Efectivo', debit: 'Débito', savings: 'Ahorros', credit: 'Crédito', sitp: 'SITP' }

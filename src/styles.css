@@ -131,3 +131,8 @@ small,.muted{color:var(--muted);font-size:12.5px}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .seg button{padding:9px 2px;font-size:13px}
 .seg{gap:2px}
+.stepper{display:flex;align-items:center;gap:18px}
+.stepper button{width:46px;height:46px;border-radius:50%;background:var(--paper);border:1px solid var(--line);font-size:24px}
+.stepper b{font:700 30px var(--font-d);min-width:40px;text-align:center}
+.fare-line{display:flex;justify-content:space-between;align-items:center;font-size:13px;gap:8px}
+.fare-line .btn{background:#ffffff26;color:#fff;border:0}

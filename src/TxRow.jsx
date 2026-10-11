@@ -8,7 +8,7 @@ export default function TxRow({ t, d, onDelete }) {
   let icon, title, sub, amt, cls
   if (t.type === 'expense') {
     icon = <CatDot name={t.category} color={cat?.color || '#7F8C8D'} />
-    title = t.category || 'Gasto'; sub = acc(t.accountId); amt = '-' + cop(t.amount); cls = 'neg'
+    title = t.category || 'Gasto'; sub = acc(t.accountId) + (t.qty ? ` - ${t.qty} pasaje${t.qty > 1 ? 's' : ''}` : ''); amt = '-' + cop(t.amount); cls = 'neg'
   } else if (t.type === 'income') {
     icon = <span className="cat-dot" style={{ background: '#2E9E5B22', color: '#2E9E5B' }}><ArrowDownLeft size={20} /></span>
     title = 'Ingreso'; sub = acc(t.accountId); amt = '+' + cop(t.amount); cls = 'pos'

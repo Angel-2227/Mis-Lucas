@@ -21,15 +21,17 @@ export function Field({ label, children }) {
   return <div className="field"><span>{label}</span>{children}</div>
 }
 
-export function MoneyInput({ value, onChange, placeholder = '0' }) {
-  const shown = value ? Number(value).toLocaleString('es-CO') : ''
+export function MoneyInput({ value, onChange, placeholder = '0', allowNegative = false }) {
+  const str = String(value ?? '')
+  const digits = str.replace(/\D/g, '')
+  const shown = (str.startsWith('-') ? '-' : '') + (digits ? Number(digits).toLocaleString('es-CO') : '')
   return (
     <input
       className="input"
       inputMode="numeric"
       placeholder={placeholder}
       value={shown}
-      onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
+      onChange={(e) => onChange((allowNegative && e.target.value.trim().startsWith('-') ? '-' : '') + e.target.value.replace(/\D/g, ''))}
     />
   )
 }

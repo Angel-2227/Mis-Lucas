@@ -5,7 +5,7 @@ import TxRow from './TxRow'
 
 const ICONS = { cash: Banknote, debit: Wallet, savings: PiggyBank, credit: CreditCard, sitp: Bus }
 
-function AccountCard({ a, balance }) {
+function AccountCard({ a, balance, fare, onFare }) {
   const Icon = ICONS[a.type] || Wallet
   return (
     <div className="acard" style={{ background: a.color || '#13241B' }}>
@@ -15,6 +15,12 @@ function AccountCard({ a, balance }) {
         {a.locked && <Lock size={14} />}
       </div>
       <div className="acard-bal">{cop(balance)}</div>
+      {a.type === 'sitp' && fare > 0 && (
+        <div className="fare-line">
+          <span>{Math.max(0, Math.floor(balance / fare))} pasajes de {cop(fare)}</span>
+          <button className="btn small" onClick={onFare}>Usar pasaje</button>
+        </div>
+      )}
       <div className="acard-bot">
         <span>{a.owner || (a.type === 'credit' ? 'Deuda actual' : '')}</span>
         {a.number && <CopyId text={a.number} />}
@@ -68,7 +74,7 @@ export default function Home({ d, go, openAdd }) {
           action={<button className="btn primary" onClick={() => go('settings')}>Ir a Ajustes</button>} />
       ) : (
         <div className="cards-scroll">
-          {accounts.map((a) => <AccountCard key={a.id} a={a} balance={d.bal[a.id]} />)}
+          {accounts.map((a) => <AccountCard key={a.id} a={a} balance={d.bal[a.id]} fare={settings.fare} onFare={() => openAdd({ type: 'fare', accountId: a.id })} />)}
         </div>
       )}
 
