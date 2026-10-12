@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Copy, Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { parseMoney, formatMoneyInput } from './lib'
 
 export function Sheet({ title, onClose, children }) {
   return createPortal(
@@ -21,17 +22,14 @@ export function Field({ label, children }) {
   return <div className="field"><span>{label}</span>{children}</div>
 }
 
-export function MoneyInput({ value, onChange, placeholder = '0', allowNegative = false }) {
-  const str = String(value ?? '')
-  const digits = str.replace(/\D/g, '')
-  const shown = (str.startsWith('-') ? '-' : '') + (digits ? Number(digits).toLocaleString('es-CO') : '')
+export function MoneyInput({ value, onChange, placeholder = '0', allowNegative = false, allowDecimal = false }) {
   return (
     <input
       className="input"
-      inputMode="numeric"
+      inputMode={allowDecimal ? 'decimal' : 'numeric'}
       placeholder={placeholder}
-      value={shown}
-      onChange={(e) => onChange((allowNegative && e.target.value.trim().startsWith('-') ? '-' : '') + e.target.value.replace(/\D/g, ''))}
+      value={formatMoneyInput(value, allowDecimal)}
+      onChange={(e) => onChange(parseMoney(e.target.value, { allowDecimal, allowNegative }))}
     />
   )
 }

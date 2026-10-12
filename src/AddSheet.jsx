@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Sheet, Field, MoneyInput } from './ui'
-import { today, cop } from './lib'
+import { today, cop, round2 } from './lib'
 
 const TYPES = [['expense', 'Gasto'], ['income', 'Ingreso'], ['transfer', 'Mover'], ['saving', 'Ahorro'], ['fare', 'Pasaje']]
 
@@ -28,7 +28,11 @@ export default function AddSheet({ d, initial = {}, onClose }) {
   const isFare = type === 'fare'
   const total = qty * fare
   const left = Math.floor(((d.bal[accountId] || 0) - total) / (fare || 1))
-  const valid = isFare ? (fare > 0 && qty > 0 && accountId) : Number(amount) > 0 &&
+  // Efectivo no admite decimales; el resto de cuentas sí.
+  const isCash = (id) => accounts.find((a) => a.id === id)?.type === 'cash'
+  const decimals = type === 'saving' ? true : type === 'transfer' ? !(isCash(accountId) || isCash(toAccountId)) : !isCash(accountId)
+  const amountNum = decimals ? round2(Number(amount)) : Math.round(Number(amount) || 0)
+  const valid = isFare ? (fare > 0 && qty > 0 && accountId) : amountNum > 0 &&
     (!needsAccount || accountId) &&
     (type !== 'transfer' || (toAccountId && toAccountId !== accountId)) &&
     (type !== 'saving' || goalId)
@@ -40,7 +44,7 @@ export default function AddSheet({ d, initial = {}, onClose }) {
       return onClose()
     }
     api.add('transactions', {
-      type, amount: Number(amount), date, note: note.trim() || undefined, createdAt: Date.now(),
+      type, amount: amountNum, date, note: note.trim() || undefined, createdAt: Date.now(),
       accountId: needsAccount ? accountId : undefined,
       toAccountId: type === 'transfer' ? toAccountId : undefined,
       category: type === 'expense' ? category : undefined,
@@ -56,7 +60,7 @@ export default function AddSheet({ d, initial = {}, onClose }) {
       <div className="seg">
         {TYPES.map(([k, l]) => <button key={k} className={type === k ? 'on' : ''} onClick={() => pickType(k)}>{l}</button>)}
       </div>
-      {!isFare && <Field label="Monto"><MoneyInput value={amount} onChange={setAmount} /></Field>}
+      {!isFare && <Field label="Monto"><MoneyInput value={amount} onChange={setAmount} allowDecimal={decimals} /></Field>}
 
       {accounts.length === 0 && type !== 'saving' && <p className="hint">Primero crea una cuenta en Ajustes.</p>}
 

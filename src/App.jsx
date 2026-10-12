@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from
 import { addDoc, collection, deleteDoc, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
 import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart } from 'lucide-react'
 import { auth, db, provider } from './firebase'
-import { DEFAULT_SETTINGS, clean, computeBalances } from './lib'
+import { DEFAULT_SETTINGS, clean, computeBalances, round2 } from './lib'
 import Home from './Home'
 import Movements from './Movements'
 import Goals from './Goals'
@@ -98,12 +98,13 @@ function Main({ user }) {
     const bal = computeBalances(accounts, txs)
     const savedByGoal = {}
     txs.filter((t) => t.type === 'saving').forEach((t) => (savedByGoal[t.goalId] = (savedByGoal[t.goalId] || 0) + t.amount))
-    const reserved = goals.filter((g) => !g.done).reduce((s, g) => s + (savedByGoal[g.id] || 0), 0)
+    Object.keys(savedByGoal).forEach((k) => (savedByGoal[k] = round2(savedByGoal[k])))
+    const reserved = round2(goals.filter((g) => !g.done).reduce((s, g) => s + (savedByGoal[g.id] || 0), 0))
     const money = accounts.filter((a) => a.type !== 'sitp') // el saldo SITP solo sirve para pasajes
-    const total = money.reduce((s, a) => s + bal[a.id], 0)
-    const physical = money.filter((a) => a.type === 'cash').reduce((s, a) => s + bal[a.id], 0)
-    const free = money.filter((a) => !a.locked).reduce((s, a) => s + bal[a.id], 0)
-    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: total - physical, available: free - reserved, api, user }
+    const total = round2(money.reduce((s, a) => s + bal[a.id], 0))
+    const physical = round2(money.filter((a) => a.type === 'cash').reduce((s, a) => s + bal[a.id], 0))
+    const free = round2(money.filter((a) => !a.locked).reduce((s, a) => s + bal[a.id], 0))
+    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: round2(total - physical), available: round2(free - reserved), api, user }
   }, [accounts, txs, goals, settings, api, user])
 
   const [online, setOnline] = useState(navigator.onLine)

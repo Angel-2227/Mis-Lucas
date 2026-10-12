@@ -230,3 +230,8 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .err{color:var(--red);font-size:13.5px;margin:10px 2px 0}
 .swatch{background-size:cover}
 @media (min-width:768px){.bcard{flex:0 0 300px}.cards-scroll .bcard{flex:0 0 310px;max-width:none}.cards-scroll.all .bcard{flex:none}}
+
+/* ---------- Enlaces e imagen de metas ---------- */
+.goal-img{display:block;width:100%;height:150px;object-fit:contain;background:#fff;border-radius:14px;margin-bottom:12px}
+.goal-img.preview{height:110px;margin:10px 0 0}
+.goal-link{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink);text-decoration:underline;margin-top:8px}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, Plus, Trash2, LogOut } from 'lucide-react'
 import { deleteField } from 'firebase/firestore'
-import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, BRANDS, NETWORKS, cop } from './lib'
+import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, BRANDS, NETWORKS, cop, round2 } from './lib'
 import { useGate, useUnlocked } from './Vault'
 import * as V from './vault'
 import { Sheet, Field, MoneyInput, CatDot } from './ui'
@@ -16,7 +16,7 @@ function AccountForm({ d, acc, onSave, onDelete, onClose }) {
   const isCard = f.type !== 'cash'
 
   const save = async () => {
-    const data = { type: f.type, name: f.name.trim(), initial: Number(f.initial) || 0, owner: f.owner || '', color: f.color, locked: !!f.locked, brand: f.brand || '', network: isCard ? f.network || '' : '' }
+    const data = { type: f.type, name: f.name.trim(), initial: f.type === 'cash' ? Math.round(Number(f.initial) || 0) : round2(f.initial), owner: f.owner || '', color: f.color, locked: !!f.locked, brand: f.brand || '', network: isCard ? f.network || '' : '' }
     if (editNum) {
       const digits = numInput.replace(/\D/g, '')
       if (digits && digits.length < 4) return alert('El número debe tener al menos 4 dígitos.')
@@ -47,9 +47,9 @@ function AccountForm({ d, acc, onSave, onDelete, onClose }) {
         <Field label="Color"><div className="swatches">{ACCOUNT_COLORS.map((c) => <button key={c} className={f.color === c ? 'on' : ''} style={{ background: c }} onClick={() => set('color', c)} />)}</div></Field>
       )}
       <Field label={f.type === 'credit' ? 'Deuda inicial (0 si no debes)' : 'Saldo actual'}>
-        <MoneyInput value={f.initial} onChange={(v) => set('initial', v)} allowNegative={f.type === 'sitp'} />
+        <MoneyInput value={f.initial} onChange={(v) => set('initial', v)} allowNegative={f.type === 'sitp'} allowDecimal={f.type !== 'cash'} />
       </Field>
-      {f.type === 'sitp' && <label className="check"><input type="checkbox" checked={String(f.initial).startsWith('-')} onChange={(e) => set('initial', (e.target.checked ? '-' : '') + String(f.initial).replace(/\D/g, ''))} /> Saldo negativo</label>}
+      {f.type === 'sitp' && <label className="check"><input type="checkbox" checked={String(f.initial).startsWith('-')} onChange={(e) => set('initial', (e.target.checked ? '-' : '') + String(f.initial).replace(/^-/, ''))} /> Saldo negativo</label>}
       {isCard && (
         <>
           <Field label={f.type === 'sitp' ? 'Número de la tarjeta (para recargar)' : 'Número de tarjeta'}>
