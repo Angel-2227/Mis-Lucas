@@ -79,11 +79,12 @@ function AccountForm({ d, acc, onSave, onDelete, onClose }) {
 
 function BiometricRow({ d }) {
   const uid = d.user.uid
-  const [avail, setAvail] = useState(false)
+  const [avail, setAvail] = useState(null)
   const [on, setOn] = useState(bioEnabled(uid))
   const [msg, setMsg] = useState('')
   useEffect(() => { bioSupported().then(setAvail) }, [])
-  if (!d.settings.vault || !avail) return null
+  if (!d.settings.vault || avail === null) return null
+  if (!avail) return <p className="hint">Este dispositivo o navegador no ofrece huella, rostro ni bloqueo de pantalla para sitios web. Revisa que tengas un bloqueo de pantalla configurado y usa un navegador actualizado (Chrome o Safari).</p>
   const toggle = async () => {
     setMsg('')
     if (on) { bioDisable(uid); return setOn(false) }
@@ -91,8 +92,8 @@ function BiometricRow({ d }) {
       await bioEnable(d.user)
       setOn(true)
       setMsg('Listo: en este dispositivo puedes abrir la app con huella o rostro. Para ver números completos se sigue pidiendo la clave.')
-    } catch {
-      setMsg('No se pudo activar. Revisa que el dispositivo tenga huella, rostro o bloqueo de pantalla configurado.')
+    } catch (e) {
+      setMsg(`No se pudo activar (${e.name || 'error'}). Revisa que el dispositivo tenga huella, rostro o bloqueo de pantalla configurado.`)
     }
   }
   return (

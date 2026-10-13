@@ -241,3 +241,10 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .lock .err{color:#ff9a7d;margin:0}
 .lock .link{color:#A9BDB0;margin:10px 0 0}
 .lock .btn:not(.primary){background:#ffffff14;color:#fff;border-color:#ffffff26}
+
+/* ---------- Campos de texto y aviso de huella ---------- */
+.input{color:var(--ink)}
+.bio-offer{display:flex;align-items:center;gap:8px;background:#fff7c9;border-radius:18px;padding:12px 14px;margin:12px 18px 0}
+.bio-offer>div{flex:1;min-width:0}
+.bio-offer strong{display:block;font-size:14px}
+@media (min-width:768px){.bio-offer{margin:20px 36px 0;max-width:1168px}}

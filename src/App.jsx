@@ -10,7 +10,7 @@ import Goals from './Goals'
 import Analytics from './Analytics'
 import Settings from './Settings'
 import AddSheet from './AddSheet'
-import LockScreen from './Lock'
+import LockScreen, { BioOffer } from './Lock'
 import { useUnlocked } from './Vault'
 import { encryptText } from './vault'
 
@@ -145,6 +145,7 @@ function Main({ user }) {
 
   return (
     <div className="app">
+      <BioOffer user={user} hasVault={!!settings.vault} />
       {!online && <div className="offline">Sin conexión. Tus cambios se guardan y se sincronizan al volver.</div>}
       <main>
         {tab === 'home' && <Home d={d} go={go} openAdd={openAdd} />}

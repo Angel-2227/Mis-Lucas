@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Eye, EyeOff, Copy, Check } from 'lucide-react'
-import { Sheet, Field } from './ui'
+import { Sheet, Field, SecretInput } from './ui'
 import * as V from './vault'
 
 export const useUnlocked = () => useSyncExternalStore(V.subscribe, V.isUnlocked)
@@ -42,8 +42,8 @@ function VaultSheet({ d, onClose, onDone }) {
     <Sheet title={vault ? 'Desbloquear números' : 'Crear clave de seguridad'} onClose={onClose}>
       <form onSubmit={submit}>
         {!vault && <p className="hint">Esta clave cifra los números de tus tarjetas. Si la olvidas no se pueden recuperar. Mejor que sea distinta a la de tu banco.</p>}
-        <Field label="Clave"><input className="input" type="password" autoFocus autoComplete="off" value={pass} onChange={(e) => setPass(e.target.value)} /></Field>
-        {!vault && <Field label="Repite la clave"><input className="input" type="password" autoComplete="off" value={pass2} onChange={(e) => setPass2(e.target.value)} /></Field>}
+        <Field label="Clave"><SecretInput autoFocus value={pass} onChange={setPass} /></Field>
+        {!vault && <Field label="Repite la clave"><SecretInput value={pass2} onChange={setPass2} /></Field>}
         {err && <p className="err">{err}</p>}
         <button className="btn primary wide" disabled={busy || !pass}>{busy ? 'Verificando...' : vault ? 'Desbloquear' : 'Crear clave'}</button>
         {vault && <button type="button" className="link" style={{ marginTop: 14, marginLeft: 0 }} onClick={forgot}>Olvidé mi clave</button>}

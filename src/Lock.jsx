@@ -3,7 +3,8 @@ import { Fingerprint } from 'lucide-react'
 import { reauthenticateWithPopup } from 'firebase/auth'
 import { auth, provider } from './firebase'
 import * as V from './vault'
-import { bioEnabled, bioSupported, bioCheck } from './biometric'
+import { SecretInput } from './ui'
+import { bioEnabled, bioSupported, bioCheck, bioEnable } from './biometric'
 
 // Pantalla de bloqueo: se muestra al abrir la app mientras exista una clave de seguridad.
 export default function LockScreen({ user, vault, accounts, api, onUnlock }) {
@@ -15,7 +16,7 @@ export default function LockScreen({ user, vault, accounts, api, onUnlock }) {
 
   const tryBio = async () => {
     setErr('')
-    try { await bioCheck(user.uid); onUnlock() } catch { setErr('No se pudo verificar con huella. Usa tu clave.') }
+    try { await bioCheck(user.uid); onUnlock() } catch (e) { setErr(`No se pudo verificar con huella (${e.name || 'error'}). Usa tu clave.`) }
   }
 
   useEffect(() => {
@@ -48,12 +49,37 @@ export default function LockScreen({ user, vault, accounts, api, onUnlock }) {
       <h1>Mis Lucas</h1>
       <p>Ingresa tu clave para abrir la app.</p>
       <form className="lock-form" onSubmit={submit}>
-        <input className="input" type="password" autoFocus autoComplete="off" placeholder="Clave" value={pass} onChange={(e) => setPass(e.target.value)} />
+        <SecretInput autoFocus placeholder="Clave" value={pass} onChange={setPass} />
         {err && <p className="err">{err}</p>}
         <button className="btn primary" disabled={busy || !pass}>{busy ? 'Verificando...' : 'Desbloquear'}</button>
         {bio && <button type="button" className="btn" onClick={tryBio}><Fingerprint size={18} /> Usar huella o rostro</button>}
       </form>
       <button className="link" onClick={forgot}>Olvidé mi clave</button>
+    </div>
+  )
+}
+
+// Ofrece activar la huella justo después de abrir la app con la clave.
+export function BioOffer({ user, hasVault }) {
+  const [show, setShow] = useState(false)
+  const [msg, setMsg] = useState('')
+  const flag = 'mislucas:bio-declined:' + user.uid
+  useEffect(() => {
+    let declined = false
+    try { declined = !!localStorage.getItem(flag) } catch { /* sin acceso */ }
+    if (!hasVault || declined || bioEnabled(user.uid)) return
+    bioSupported().then(setShow)
+  }, [hasVault])
+  if (!show) return null
+  const enable = async () => {
+    try { await bioEnable(user); setShow(false) } catch (e) { setMsg(`No se pudo activar (${e.name || 'error'}).`) }
+  }
+  const decline = () => { try { localStorage.setItem(flag, '1') } catch { /* sin acceso */ } setShow(false) }
+  return (
+    <div className="bio-offer">
+      <div><strong>Abrir con huella o rostro</strong><small>{msg || 'Actívalo en este dispositivo para no escribir la clave.'}</small></div>
+      <button className="btn small" onClick={decline}>Ahora no</button>
+      <button className="btn small primary" onClick={enable}>Activar</button>
     </div>
   )
 }
