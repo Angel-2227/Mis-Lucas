@@ -10,6 +10,7 @@ import Goals from './Goals'
 import Analytics from './Analytics'
 import Settings from './Settings'
 import AddSheet from './AddSheet'
+import LockScreen from './Lock'
 import { useUnlocked } from './Vault'
 import { encryptText } from './vault'
 
@@ -25,15 +26,19 @@ function useCollection(uid, name) {
 
 function useSettings(uid) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [loaded, setLoaded] = useState(false)
   const seeded = useRef(false)
   useEffect(() => {
     const ref = doc(db, 'users', uid, 'meta', 'settings')
     return onSnapshot(ref, { includeMetadataChanges: true }, (s) => {
-      if (s.exists()) setSettings({ ...DEFAULT_SETTINGS, ...s.data() })
-      else if (!s.metadata.fromCache && !seeded.current) { seeded.current = true; setDoc(ref, DEFAULT_SETTINGS) }
-    })
+      if (s.exists()) { setSettings({ ...DEFAULT_SETTINGS, ...s.data() }); setLoaded(true) }
+      else if (!s.metadata.fromCache) {
+        setLoaded(true)
+        if (!seeded.current) { seeded.current = true; setDoc(ref, DEFAULT_SETTINGS) }
+      }
+    }, () => setLoaded(true))
   }, [uid])
-  return settings
+  return [settings, loaded]
 }
 
 const ROUTES = { home: '/', moves: '/movimientos', goals: '/metas', stats: '/analisis', settings: '/ajustes' }
@@ -72,7 +77,7 @@ function Main({ user }) {
   const accounts = useCollection(uid, 'accounts')
   const txs = useCollection(uid, 'transactions')
   const goals = useCollection(uid, 'goals')
-  const settings = useSettings(uid)
+  const [settings, settingsLoaded] = useSettings(uid)
   const [tab, setTab] = useState(() => tabFromPath(window.location.pathname))
   const go = (t) => {
     if (ROUTES[t] !== window.location.pathname) window.history.pushState({}, '', ROUTES[t])
@@ -114,6 +119,9 @@ function Main({ user }) {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
   }, [])
   const unlocked = useUnlocked()
+  // La app se desbloquea una vez por sesión (al abrirla); si la clave ya se usó, también cuenta.
+  const [appUnlocked, setAppUnlocked] = useState(false)
+  useEffect(() => { if (unlocked) setAppUnlocked(true) }, [unlocked])
   useEffect(() => {
     if (!unlocked) return
     accounts.filter((a) => a.number && !a.numberEnc).forEach(async (a) => {
@@ -129,6 +137,11 @@ function Main({ user }) {
     ['home', 'Inicio', HomeIcon], ['moves', 'Movimientos', ListOrdered], null,
     ['goals', 'Metas', Target], ['stats', 'Análisis', PieChart],
   ]
+
+  if (!settingsLoaded) return <div className="login"><p>Cargando...</p></div>
+  if (settings.vault && !appUnlocked && !unlocked) {
+    return <LockScreen user={user} vault={settings.vault} accounts={accounts} api={api} onUnlock={() => setAppUnlocked(true)} />
+  }
 
   return (
     <div className="app">

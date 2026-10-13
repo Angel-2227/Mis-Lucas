@@ -4,6 +4,7 @@ import { deleteField } from 'firebase/firestore'
 import { ACCOUNT_TYPES, ACCOUNT_COLORS, MONTHS_SHORT, BRANDS, NETWORKS, cop, round2 } from './lib'
 import { useGate, useUnlocked } from './Vault'
 import * as V from './vault'
+import { bioSupported, bioEnabled, bioEnable, bioDisable } from './biometric'
 import { Sheet, Field, MoneyInput, CatDot } from './ui'
 
 function AccountForm({ d, acc, onSave, onDelete, onClose }) {
@@ -76,18 +77,50 @@ function AccountForm({ d, acc, onSave, onDelete, onClose }) {
   )
 }
 
+function BiometricRow({ d }) {
+  const uid = d.user.uid
+  const [avail, setAvail] = useState(false)
+  const [on, setOn] = useState(bioEnabled(uid))
+  const [msg, setMsg] = useState('')
+  useEffect(() => { bioSupported().then(setAvail) }, [])
+  if (!d.settings.vault || !avail) return null
+  const toggle = async () => {
+    setMsg('')
+    if (on) { bioDisable(uid); return setOn(false) }
+    try {
+      await bioEnable(d.user)
+      setOn(true)
+      setMsg('Listo: en este dispositivo puedes abrir la app con huella o rostro. Para ver números completos se sigue pidiendo la clave.')
+    } catch {
+      setMsg('No se pudo activar. Revisa que el dispositivo tenga huella, rostro o bloqueo de pantalla configurado.')
+    }
+  }
+  return (
+    <>
+      <button className="btn wide" onClick={toggle}>{on ? 'Desactivar huella en este dispositivo' : 'Activar huella o rostro en este dispositivo'}</button>
+      {msg && <p className="hint">{msg}</p>}
+    </>
+  )
+}
+
 function SecurityCard({ d }) {
   const unlocked = useUnlocked()
   const [run, gate] = useGate(d)
+  const has = !!d.settings.vault
   return (
     <>
       <h2>Seguridad</h2>
       <div className="list pad">
         {gate}
-        <p className="hint" style={{ marginTop: 0 }}>Los números de tarjeta se guardan cifrados y se ven completos solo al desbloquear con tu clave, por 10 minutos o hasta cerrar la app.</p>
+        <p className="hint" style={{ marginTop: 0 }}>
+          {has
+            ? 'La app pide tu clave cada vez que se abre. Con ella también se ven los números completos de tus tarjetas, por 10 minutos o hasta cerrar la app.'
+            : 'Crea una clave para proteger la app y cifrar los números de tus tarjetas. Después se pedirá cada vez que abras la app.'}
+        </p>
         {unlocked
-          ? <button className="btn wide" onClick={V.lock}>Bloquear ahora</button>
-          : <button className="btn wide" onClick={() => run(() => {})}>{d.settings.vault ? 'Desbloquear' : 'Crear clave de seguridad'}</button>}
+          ? <button className="btn wide" onClick={V.lock}>Bloquear números ahora</button>
+          : <button className="btn wide" onClick={() => run(() => {})}>{has ? 'Desbloquear números' : 'Crear clave de seguridad'}</button>}
+        <BiometricRow d={d} />
       </div>
     </>
   )
