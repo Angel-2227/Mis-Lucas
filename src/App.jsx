@@ -3,7 +3,7 @@ import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from
 import { addDoc, collection, deleteDoc, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
 import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart } from 'lucide-react'
 import { auth, db, provider } from './firebase'
-import { DEFAULT_SETTINGS, clean, computeBalances, round2 } from './lib'
+import { DEFAULT_SETTINGS, clean, computeBalances, computeDebts, round2 } from './lib'
 import Home from './Home'
 import Movements from './Movements'
 import Goals from './Goals'
@@ -106,10 +106,24 @@ function Main({ user }) {
     Object.keys(savedByGoal).forEach((k) => (savedByGoal[k] = round2(savedByGoal[k])))
     const reserved = round2(goals.filter((g) => !g.done).reduce((s, g) => s + (savedByGoal[g.id] || 0), 0))
     const money = accounts.filter((a) => a.type !== 'sitp') // el saldo SITP solo sirve para pasajes
+    // Ahorro por tarjeta: el dinero de metas guardado en una cuenta sigue ahí, pero queda "en ahorro".
+    const activeGoalIds = new Set(goals.filter((g) => !g.done).map((g) => g.id))
+    const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
+    const savedByAccount = {}
+    let reservedFree = 0
+    txs.filter((t) => t.type === 'saving' && activeGoalIds.has(t.goalId)).forEach((t) => {
+      const a = accById[t.accountId]
+      if (a) savedByAccount[a.id] = round2((savedByAccount[a.id] || 0) + t.amount)
+      if (!a || (!a.locked && a.type !== 'sitp')) reservedFree = round2(reservedFree + t.amount)
+    })
+    const debts = computeDebts(txs)
+    const debtMap = Object.fromEntries(debts.map((x) => [x.id, x]))
+    const owedToMe = round2(debts.filter((x) => x.kind === 'owed').reduce((s, x) => s + x.left, 0))
+    const iOwe = round2(debts.filter((x) => x.kind === 'owe').reduce((s, x) => s + x.left, 0))
     const total = round2(money.reduce((s, a) => s + bal[a.id], 0))
     const physical = round2(money.filter((a) => a.type === 'cash').reduce((s, a) => s + bal[a.id], 0))
     const free = round2(money.filter((a) => !a.locked).reduce((s, a) => s + bal[a.id], 0))
-    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: round2(total - physical), available: round2(free - reserved), api, user }
+    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: round2(total - physical), available: round2(free - reservedFree), savedByAccount, debts, debtMap, owedToMe, iOwe, api, user }
   }, [accounts, txs, goals, settings, api, user])
 
   const [online, setOnline] = useState(navigator.onLine)

@@ -91,6 +91,8 @@ export function computeBalances(accounts, txs) {
       if (t.accountId in b) b[t.accountId] -= v
       if (t.toAccountId in b) b[t.toAccountId] += v
     }
+    // Pago de una deuda: 'in' = alguien te pagó, 'out' = tú pagaste. No cuenta como ingreso ni gasto.
+    if (t.type === 'settle' && t.accountId in b) b[t.accountId] += t.dir === 'in' ? v : -v
   })
   return Object.fromEntries(Object.entries(b).map(([k, v]) => [k, v / 100]))
 }
@@ -104,3 +106,18 @@ export const BRANDS = {
   cash: { label: 'Plata física', cls: 'b-cash' },
 }
 export const NETWORKS = { '': 'Ninguna', mastercard: 'Mastercard', visa: 'Visa' }
+
+// Deudas: un gasto marcado con debtKind ('owed' = me deben, 'owe' = yo debo).
+// Lo pagado sale de los movimientos tipo 'settle' enlazados por debtId.
+export function computeDebts(txs) {
+  const paid = {}
+  txs.filter((t) => t.type === 'settle' && t.debtId).forEach((t) => { paid[t.debtId] = round2((paid[t.debtId] || 0) + t.amount) })
+  return txs.filter((t) => t.type === 'expense' && t.debtKind).map((t) => {
+    const total = round2(t.debtAmount ?? t.amount)
+    const p = paid[t.id] || 0
+    return { id: t.id, tx: t, kind: t.debtKind, person: (t.debtPerson || 'Sin nombre').trim(), total, paid: p, left: round2(Math.max(0, total - p)) }
+  })
+}
+
+// Para abrir Movimientos con un filtro ya elegido (desde Inicio).
+export const navHint = { filter: null }

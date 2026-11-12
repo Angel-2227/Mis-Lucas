@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Sheet, Field, MoneyInput } from './ui'
 import { today, cop, round2 } from './lib'
+import { DebtFields, SavingAccountField } from './Debts'
 
 const TYPES = [['expense', 'Gasto'], ['income', 'Ingreso'], ['transfer', 'Mover'], ['saving', 'Ahorro'], ['fare', 'Pasaje']]
 
@@ -18,24 +19,28 @@ export default function AddSheet({ d, initial = {}, onClose }) {
   const [goalId, setGoalId] = useState(initial.goalId || activeGoals[0]?.id || '')
   const [note, setNote] = useState('')
   const [date, setDate] = useState(today())
+  const [debt, setDebt] = useState({ debtKind: '', debtPerson: '', debtAmount: '' })
+  const setD = (k, v) => setDebt((p) => ({ ...p, [k]: v }))
+  const [savingAcc, setSavingAcc] = useState(initial.accountId || accounts.find((a) => a.type !== 'sitp' && a.type !== 'credit')?.id || '')
+  const owe = type === 'expense' && debt.debtKind === 'owe'
 
   const pickType = (k) => {
     setType(k)
     if (k === 'fare' && !sitp.some((a) => a.id === accountId)) setAccountId(sitp[0]?.id || '')
     if (k !== 'fare' && sitp.some((a) => a.id === accountId) && k !== 'transfer') setAccountId(accounts[0]?.id || '')
   }
-  const needsAccount = type !== 'saving'
+  const needsAccount = type !== 'saving' && !owe
   const isFare = type === 'fare'
   const total = qty * fare
   const left = Math.floor(((d.bal[accountId] || 0) - total) / (fare || 1))
   // Efectivo no admite decimales; el resto de cuentas sí.
   const isCash = (id) => accounts.find((a) => a.id === id)?.type === 'cash'
-  const decimals = type === 'saving' ? true : type === 'transfer' ? !(isCash(accountId) || isCash(toAccountId)) : !isCash(accountId)
+  const decimals = type === 'saving' || owe ? true : type === 'transfer' ? !(isCash(accountId) || isCash(toAccountId)) : !isCash(accountId)
   const amountNum = decimals ? round2(Number(amount)) : Math.round(Number(amount) || 0)
   const valid = isFare ? (fare > 0 && qty > 0 && accountId) : amountNum > 0 &&
     (!needsAccount || accountId) &&
     (type !== 'transfer' || (toAccountId && toAccountId !== accountId)) &&
-    (type !== 'saving' || goalId)
+    (type !== 'saving' || goalId) && !(type === 'expense' && debt.debtKind && !debt.debtPerson.trim())
 
   const save = () => {
     if (!valid) return
@@ -43,9 +48,14 @@ export default function AddSheet({ d, initial = {}, onClose }) {
       api.add('transactions', { type: 'expense', amount: total, qty, category: 'Transporte', date, note: note.trim() || undefined, accountId, createdAt: Date.now() })
       return onClose()
     }
+    const da = round2(Number(debt.debtAmount))
+    const isDebt = type === 'expense' && debt.debtKind
     api.add('transactions', {
       type, amount: amountNum, date, note: note.trim() || undefined, createdAt: Date.now(),
-      accountId: needsAccount ? accountId : undefined,
+      accountId: type === 'saving' ? savingAcc || undefined : needsAccount ? accountId : undefined,
+      debtKind: isDebt ? debt.debtKind : undefined,
+      debtPerson: isDebt ? debt.debtPerson.trim() : undefined,
+      debtAmount: isDebt && debt.debtKind === 'owed' && da > 0 && da < amountNum ? da : undefined,
       toAccountId: type === 'transfer' ? toAccountId : undefined,
       category: type === 'expense' ? category : undefined,
       goalId: type === 'saving' ? goalId : undefined,
@@ -95,7 +105,7 @@ export default function AddSheet({ d, initial = {}, onClose }) {
             </select>
           </Field>
           {activeGoals.length === 0 && <p className="hint">Crea una meta primero.</p>}
-          <p className="hint">El ahorro aparta dinero de tu disponible sin moverlo de cuenta.</p>
+          <SavingAccountField d={d} value={savingAcc} onChange={setSavingAcc} />
         </>
       ) : (
         <Field label={type === 'income' ? 'Entra a' : 'Sale de'}>
@@ -115,6 +125,7 @@ export default function AddSheet({ d, initial = {}, onClose }) {
         </Field>
       )}
 
+      {type === 'expense' && <DebtFields v={debt} set={setD} d={d} />}
       <Field label="Nota (opcional)"><input className="input" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
       <Field label="Fecha"><input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
       <button className="btn primary wide" disabled={!valid} onClick={save}>Guardar</button>

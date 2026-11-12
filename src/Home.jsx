@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Pin, Settings as Cog, Banknote, Lock, Wifi } from 'lucide-react'
-import { cop, today, monthKey, BRANDS } from './lib'
+import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank } from 'lucide-react'
+import { cop, today, monthKey, BRANDS, navHint } from './lib'
 import { Empty } from './ui'
 import { useGate, CardNumber } from './Vault'
 import TxRow from './TxRow'
+import TxDetail from './TxDetail'
 
 const TYPE_LABEL = { debit: 'débito', credit: 'crédito', savings: 'ahorros', sitp: 'transporte', cash: '' }
 
@@ -13,7 +14,7 @@ function Network({ n }) {
   return null
 }
 
-function AccountCard({ a, balance, fare, onFare, pinned, onPin, run }) {
+function AccountCard({ a, balance, saved, fare, onFare, pinned, onPin, run }) {
   const b = BRANDS[a.brand || (a.type === 'cash' ? 'cash' : '')]
   const isCash = a.type === 'cash'
   const showName = b && a.name.trim().toLowerCase() !== b.label.toLowerCase()
@@ -28,8 +29,9 @@ function AccountCard({ a, balance, fare, onFare, pinned, onPin, run }) {
         </div>
       </div>
       <div className="bcard-mid">
-        <small>{a.type === 'credit' ? 'Deuda actual' : 'Disponible'}</small>
-        <div className="bcard-bal">{cop(balance)}</div>
+        <small>{a.type === 'credit' ? 'Deuda actual' : saved > 0 ? 'Disponible (sin ahorro)' : 'Disponible'}</small>
+        <div className="bcard-bal">{cop(balance - saved)}</div>
+        {saved > 0 && <div className="bcard-saved"><PiggyBank size={14} /><span>En ahorro {cop(saved)}</span><span>Total {cop(balance)}</span></div>}
         {a.type === 'sitp' && fare > 0 ? (
           <div className="fare-line">
             <span>{Math.max(0, Math.floor(balance / fare))} pasajes de {cop(fare)}</span>
@@ -54,6 +56,7 @@ function AccountCard({ a, balance, fare, onFare, pinned, onPin, run }) {
 export default function Home({ d, go, openAdd }) {
   const { accounts, txs, settings, api } = d
   const [showAll, setShowAll] = useState(false)
+  const [openId, setOpenId] = useState(null)
   const [run, gate] = useGate(d)
   const defaultIds = [...accounts].sort((a, b) => d.bal[b.id] - d.bal[a.id]).slice(0, 2).map((a) => a.id)
   const pinnedIds = settings.pinned ?? defaultIds
@@ -96,7 +99,7 @@ export default function Home({ d, go, openAdd }) {
         <div className="hero-split">
           <div><small>Físico</small><b>{cop(d.physical)}</b></div>
           <div><small>Virtual</small><b>{cop(d.virtual)}</b></div>
-          <div><small>En metas</small><b>{cop(d.reserved)}</b></div>
+          <div><small>En ahorro</small><b>{cop(d.reserved)}</b></div>
         </div>
       </section>
 
@@ -117,7 +120,7 @@ export default function Home({ d, go, openAdd }) {
           {visible.length === 0 ? <p className="hint">No hay tarjetas fijadas. Toca "Ver todas" y fija las que quieras con el alfiler.</p> : (
             <div className={'cards-scroll' + (showAll ? ' all' : '')}>
               {visible.map((a) => (
-                <AccountCard key={a.id} a={a} run={run} balance={d.bal[a.id]} fare={settings.fare}
+                <AccountCard key={a.id} a={a} run={run} balance={d.bal[a.id]} saved={d.savedByAccount[a.id] || 0} fare={settings.fare}
                   pinned={pinnedIds.includes(a.id)} onPin={() => togglePin(a.id)}
                   onFare={() => openAdd({ type: 'fare', accountId: a.id })} />
               ))}
@@ -142,11 +145,19 @@ export default function Home({ d, go, openAdd }) {
         <div><small>Ahorrado</small><b>{cop(sav)}</b></div>
       </section>
 
+      {(d.owedToMe > 0 || d.iOwe > 0) && (
+        <button className="debt-sum home" onClick={() => { navHint.filter = 'debts'; go('moves') }}>
+          <div><small>Te deben</small><b className="pos">{cop(d.owedToMe)}</b></div>
+          <div><small>Debes</small><b className="neg">{cop(d.iOwe)}</b></div>
+        </button>
+      )}
+
       <h2>Últimos movimientos</h2>
       <div className="list">
         {recent.length === 0 ? <Empty title="Sin movimientos" text="Toca el botón + para registrar el primero." />
-          : recent.map((t) => <TxRow key={t.id} t={t} d={d} />)}
+          : recent.map((t) => <TxRow key={t.id} t={t} d={d} onOpen={setOpenId} />)}
       </div>
+      {openId && <TxDetail key={openId} id={openId} d={d} onClose={() => setOpenId(null)} />}
       </div>
       </div>
     </div>
