@@ -29,9 +29,9 @@ function AccountCard({ a, balance, saved, fare, onFare, pinned, onPin, run }) {
         </div>
       </div>
       <div className="bcard-mid">
-        <small>{a.type === 'credit' ? 'Deuda actual' : saved > 0 ? 'Disponible (sin ahorro)' : 'Disponible'}</small>
+        <small>{a.type === 'credit' ? 'Deuda actual' : 'Disponible'}</small>
         <div className="bcard-bal">{cop(balance - saved)}</div>
-        {saved > 0 && <div className="bcard-saved"><PiggyBank size={14} /><span>En ahorro {cop(saved)}</span><span>Total {cop(balance)}</span></div>}
+        {saved > 0 && <div className="bcard-saved"><PiggyBank size={13} /><span>En ahorro {cop(saved)}</span><span className="hide-sm">· Total {cop(balance)}</span></div>}
         {a.type === 'sitp' && fare > 0 ? (
           <div className="fare-line">
             <span>{Math.max(0, Math.floor(balance / fare))} pasajes de {cop(fare)}</span>
@@ -118,7 +118,7 @@ export default function Home({ d, go, openAdd }) {
             </div>
           </div>
           {visible.length === 0 ? <p className="hint">No hay tarjetas fijadas. Toca "Ver todas" y fija las que quieras con el alfiler.</p> : (
-            <div className={'cards-scroll' + (showAll ? ' all' : '')}>
+            <div className={'cards-scroll' + (showAll ? ' all' : '') + (visible.length === 1 ? ' one' : '')}>
               {visible.map((a) => (
                 <AccountCard key={a.id} a={a} run={run} balance={d.bal[a.id]} saved={d.savedByAccount[a.id] || 0} fare={settings.fare}
                   pinned={pinnedIds.includes(a.id)} onPin={() => togglePin(a.id)}

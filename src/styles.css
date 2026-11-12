@@ -282,3 +282,39 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .diff{display:grid;grid-template-columns:90px 1fr 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center}
 .diff span{color:var(--muted)} .diff s{color:var(--red);opacity:.8} .diff b{color:var(--green)}
 .seg button:disabled{opacity:.5}
+
+/* ---- Tarjetas v2: dos por vista en celular, sin cortes ---- */
+.bcard{aspect-ratio:auto;min-height:178px}
+.cnum{flex-wrap:wrap}
+.debt-sum{padding:0}
+.bcard-saved span{white-space:nowrap}
+@media (max-width:767px){
+  .cards-scroll{margin:12px 0 0;padding:4px 0 22px;margin-bottom:-14px;gap:10px;scroll-snap-type:x mandatory}
+  .cards-scroll .bcard{flex:0 0 calc((100% - 10px) / 2);max-width:none;scroll-snap-align:start;scroll-snap-stop:always;padding:12px;min-height:168px;border-radius:18px;box-shadow:0 6px 14px #0e1b1426}
+  .cards-scroll.one .bcard{flex-basis:100%}
+  .cards-scroll.all{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:visible;padding:4px 0 8px;margin:12px 0 0}
+  .cards-scroll.all .bcard{flex:none}
+  .bcard-top>div:first-child{min-width:0;flex:1}
+  .wordmark{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-nu .wordmark{font-size:23px}
+  .b-cash .wordmark{font-size:14px}
+  .bname{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bcard-icons{gap:2px}
+  .pin{width:24px;height:24px}
+  .bcard-mid small{font-size:10.5px}
+  .bcard-bal{font-size:clamp(14px,4.6vw,18px);white-space:nowrap}
+  .bcard-saved{font-size:10.5px;padding:3px 8px;gap:4px;margin-top:5px}
+  .hide-sm{display:none}
+  .chip-ic{width:26px;height:19px}
+  .nfc{width:15px;height:15px}
+  .bcard .fare-line{flex-direction:column;align-items:stretch;gap:5px;font-size:11px}
+  .bcard .fare-line .btn{padding:6px 8px;font-size:12px}
+  .bcard-bot{flex-direction:column;align-items:flex-start;gap:3px}
+  .bcard-right{flex-direction:row;align-items:center;gap:6px}
+  .bcard-right small{font-size:10.5px}
+  .cnum{font-size:12px;letter-spacing:.04em;gap:0}
+  .cnum button{width:24px;height:24px}
+  .owner{font-size:11px}
+  .mc i{width:18px;height:18px} .mc i+i{margin-left:-7px}
+  .visa{font-size:15px}
+}

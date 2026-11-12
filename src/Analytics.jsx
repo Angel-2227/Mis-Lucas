@@ -21,6 +21,33 @@ export default function Analytics({ d }) {
   })
   const max = Math.max(1, ...series.flatMap((s) => [s.inc, s.exp]))
 
+  // Deudas pendientes por persona (no dependen del mes: es lo que falta hoy)
+  const byPerson = (kind) => {
+    const g = {}
+    d.debts.filter((x) => x.kind === kind && x.left > 0).forEach((x) => {
+      const k = x.person.toLowerCase()
+      g[k] ||= { person: x.person, left: 0, n: 0 }
+      g[k].left += x.left; g[k].n += 1
+    })
+    return Object.values(g).sort((a, b) => b.left - a.left)
+  }
+  const owedList = byPerson('owed')
+  const oweList = byPerson('owe')
+  const DebtList = ({ title, list, total, cls }) => (
+    <>
+      <h2>{title}</h2>
+      <div className="list pad">
+        <div className="bar-top"><span>Total pendiente</span><b className={cls}>{cop(total)}</b></div>
+        {list.map((p) => (
+          <div className="bar-row" key={p.person}>
+            <div className="bar-top"><span>{p.person} <small>({p.n} {p.n === 1 ? 'deuda' : 'deudas'})</small></span><b>{cop(p.left)}</b></div>
+            <div className="progress"><i style={{ width: (p.left / list[0].left) * 100 + '%', background: cls === 'pos' ? 'var(--green)' : 'var(--red)' }} /></div>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+
   return (
     <div className="page">
       <h1>Análisis</h1>
@@ -45,6 +72,20 @@ export default function Analytics({ d }) {
           ))}
         </div>
       )}
+
+      <h2>Quién te debe</h2>
+      {owedList.length === 0 ? <Empty title="Nadie te debe" text="Marca un gasto como &quot;Me deben&quot; y aparece aquí." /> : (
+        <div className="list pad">
+          <div className="bar-top"><span>Total pendiente</span><b className="pos">{cop(d.owedToMe)}</b></div>
+          {owedList.map((p) => (
+            <div className="bar-row" key={p.person}>
+              <div className="bar-top"><span>{p.person} <small>({p.n} {p.n === 1 ? 'deuda' : 'deudas'})</small></span><b>{cop(p.left)}</b></div>
+              <div className="progress"><i style={{ width: (p.left / owedList[0].left) * 100 + '%', background: 'var(--green)' }} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+      {oweList.length > 0 && <DebtList title="Lo que debes" list={oweList} total={d.iOwe} cls="neg" />}
 
       </div>
       <div>
