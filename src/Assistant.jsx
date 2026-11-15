@@ -18,12 +18,12 @@ export default function Assistant({ d, back, openAdd }) {
   const prev = monthStats(d.txs, prevKey)
   const { totals, cats } = compareMonths(stats, prev)
   const list = notes(stats, prev)
+  const colorOf = (n) => d.settings.categories.find((c) => c.name === n)?.color || '#7F8C8D'
   const pairs = totals.filter((r) => r.name !== 'Apartado para metas' || r.cur > 0 || r.prev > 0)
   const catSorted = Object.entries(stats.byCat).sort((a, b) => b[1] - a[1])
   const donutData = [...catSorted.slice(0, 5).map(([name, value]) => ({ name, value, color: colorOf(name) })),
     ...(catSorted.length > 5 ? [{ name: 'Otros', value: catSorted.slice(5).reduce((x, [, v]) => x + v, 0), color: '#B9C9A4' }] : [])]
   const closed = month < cur
-  const colorOf = (n) => d.settings.categories.find((c) => c.name === n)?.color || '#7F8C8D'
   const pend = (kind) => Object.values(d.debts.filter((x) => x.kind === kind && x.left > 0).reduce((g, x) => {
     const k = x.person.toLowerCase(); g[k] ||= { person: x.person, left: 0, n: 0 }; g[k].left += x.left; g[k].n += 1; return g
   }, {})).sort((a, b) => b.left - a.left)
