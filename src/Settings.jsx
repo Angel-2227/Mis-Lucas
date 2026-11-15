@@ -204,11 +204,20 @@ export default function Settings({ d, back }) {
         {d.accounts.map((a) => (
           <button className="row btn-row" key={a.id} onClick={() => setAccForm(a)}>
             <span className={'swatch ' + (BRANDS[a.brand || (a.type === 'cash' ? 'cash' : '')]?.cls || '')} style={BRANDS[a.brand || (a.type === 'cash' ? 'cash' : '')] ? undefined : { background: a.color }} />
-            <div className="row-main"><strong>{a.name}</strong><small>{ACCOUNT_TYPES[a.type]}{a.owner ? ` - ${a.owner}` : ''}{a.locked ? ' - apartada' : ''}</small></div>
+            <div className="row-main"><strong>{a.name}</strong><small>{ACCOUNT_TYPES[a.type]}{a.owner ? ` - ${a.owner}` : ''}{a.locked ? ' - apartada' : ''}{settings.defaultAccountId === a.id ? ' - predeterminada' : ''}</small></div>
             <b className="amt">{cop(d.bal[a.id])}</b>
           </button>
         ))}
       </div>
+      {d.accounts.some((a) => a.type !== 'sitp') && (
+        <div className="list" style={{ marginTop: 12 }}><div className="row">
+          <div className="row-main"><strong>Tarjeta predeterminada</strong><small>Se elige sola al registrar un gasto o un ingreso</small></div>
+          <select className="input" style={{ width: 150 }} value={settings.defaultAccountId || ''} onChange={(e) => api.saveSettings({ defaultAccountId: e.target.value || null })}>
+            <option value="">Ninguna</option>
+            {d.accounts.filter((a) => a.type !== 'sitp').map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        </div></div>
+      )}
 
       </div>
       <div className="blk">

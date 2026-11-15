@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank, Bus, Smartphone, Landmark } from 'lucide-react'
+import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank, Bus, Smartphone, Landmark, Star } from 'lucide-react'
 import { cop, today, monthKey, BRANDS, navHint } from './lib'
 import { Empty } from './ui'
 import { useGate, CardNumber } from './Vault'
@@ -39,7 +39,7 @@ function BrandLogo({ brand, type }) {
   return Icon ? <span className="blogo-ic"><Icon size={17} /></span> : null
 }
 
-function AccountCard({ a, balance, saved, fare, onFare, pinned, onPin, run }) {
+function AccountCard({ a, balance, saved, isDefault, fare, onFare, pinned, onPin, run }) {
   const key = a.type === 'sitp' && !brandKey(a) ? 'sitp' : brandKey(a)
   const label = key === 'sitp' ? 'SITP' : BRANDS[key]?.label
   const sub = label && !norm(a.name).includes(norm(label)) ? label : ''
@@ -70,6 +70,7 @@ function AccountCard({ a, balance, saved, fare, onFare, pinned, onPin, run }) {
         </div>
         <div className="bcard-right">
           {a.locked && <Lock size={13} />}
+          {isDefault && <Star size={12} fill="currentColor" aria-label="Predeterminada" />}
           {TYPE_LABEL[a.type] && <small>{TYPE_LABEL[a.type]}</small>}
           <Network n={a.network} />
           <button className="pin" onClick={onPin} aria-label={pinned ? 'Quitar de inicio' : 'Fijar en inicio'}><Pin size={16} fill={pinned ? 'currentColor' : 'none'} /></button>
@@ -86,7 +87,10 @@ export default function Home({ d, go, openAdd }) {
   const [run, gate] = useGate(d)
   const defaultIds = [...accounts].sort((a, b) => d.bal[b.id] - d.bal[a.id]).slice(0, 2).map((a) => a.id)
   const pinnedIds = settings.pinned ?? defaultIds
-  const visible = showAll ? accounts : accounts.filter((a) => pinnedIds.includes(a.id))
+  // De la que más plata tiene a la que menos (disponible, sin lo que está en ahorro). Las de crédito van al final según su deuda.
+  const worth = (a) => (a.type === 'credit' ? -d.bal[a.id] : d.bal[a.id] - (d.savedByAccount[a.id] || 0))
+  const sorted = [...accounts].sort((a, b) => worth(b) - worth(a))
+  const visible = showAll ? sorted : sorted.filter((a) => pinnedIds.includes(a.id))
   const togglePin = (id) => api.saveSettings({ pinned: pinnedIds.includes(id) ? pinnedIds.filter((x) => x !== id) : [...pinnedIds, id] })
   const cur = monthKey(today())
   const month = txs.filter((t) => monthKey(t.date) === cur)
@@ -146,7 +150,7 @@ export default function Home({ d, go, openAdd }) {
           {visible.length === 0 ? <p className="hint">No hay tarjetas fijadas. Toca "Ver todas" y fija las que quieras con el alfiler.</p> : (
             <div className={'cards-scroll' + (showAll ? ' all' : '') + (visible.length === 1 ? ' one' : '')}>
               {visible.map((a) => (
-                <AccountCard key={a.id} a={a} run={run} balance={d.bal[a.id]} saved={d.savedByAccount[a.id] || 0} fare={settings.fare}
+                <AccountCard key={a.id} a={a} run={run} balance={d.bal[a.id]} isDefault={settings.defaultAccountId === a.id} saved={d.savedByAccount[a.id] || 0} fare={settings.fare}
                   pinned={pinnedIds.includes(a.id)} onPin={() => togglePin(a.id)}
                   onFare={() => openAdd({ type: 'fare', accountId: a.id })} />
               ))}

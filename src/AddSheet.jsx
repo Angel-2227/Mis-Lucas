@@ -10,11 +10,13 @@ export default function AddSheet({ d, initial = {}, onClose }) {
   const activeGoals = goals.filter((g) => !g.done)
   const sitp = accounts.filter((a) => a.type === 'sitp')
   const fare = Number(settings.fare) || 0
+  // Tarjeta predeterminada (Ajustes): se elige sola en gastos e ingresos.
+  const defAcc = accounts.find((a) => a.id === settings.defaultAccountId && a.type !== 'sitp')?.id || accounts.find((a) => a.type !== 'sitp')?.id || accounts[0]?.id || ''
   const [type, setType] = useState(initial.type || 'expense')
   const [amount, setAmount] = useState('')
   const [qty, setQty] = useState(2)
-  const [accountId, setAccountId] = useState(initial.accountId || (initial.type === 'fare' ? sitp[0]?.id : accounts[0]?.id) || '')
-  const [toAccountId, setToAccountId] = useState(accounts[1]?.id || '')
+  const [accountId, setAccountId] = useState(initial.accountId || (initial.type === 'fare' ? sitp[0]?.id : defAcc) || '')
+  const [toAccountId, setToAccountId] = useState(accounts.find((a) => a.id !== defAcc)?.id || '')
   const [category, setCategory] = useState(settings.categories[0]?.name || '')
   const [goalId, setGoalId] = useState(initial.goalId || activeGoals[0]?.id || '')
   const [note, setNote] = useState('')
@@ -27,7 +29,7 @@ export default function AddSheet({ d, initial = {}, onClose }) {
   const pickType = (k) => {
     setType(k)
     if (k === 'fare' && !sitp.some((a) => a.id === accountId)) setAccountId(sitp[0]?.id || '')
-    if (k !== 'fare' && sitp.some((a) => a.id === accountId) && k !== 'transfer') setAccountId(accounts[0]?.id || '')
+    if (k !== 'fare' && sitp.some((a) => a.id === accountId) && k !== 'transfer') setAccountId(defAcc)
   }
   const needsAccount = type !== 'saving' && !owe
   const isFare = type === 'fare'

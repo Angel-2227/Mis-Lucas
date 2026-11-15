@@ -71,6 +71,7 @@ export const DEFAULT_SETTINGS = {
   skipped: [],
   fare: 3550,
   pinned: null,
+  defaultAccountId: null,
   vault: null,
 }
 
