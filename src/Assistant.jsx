@@ -27,6 +27,11 @@ export default function Assistant({ d, back }) {
   const list = notes(stats, prev)
   const closed = month < cur
   const colorOf = (n) => d.settings.categories.find((c) => c.name === n)?.color || '#7F8C8D'
+  const pend = (kind) => Object.values(d.debts.filter((x) => x.kind === kind && x.left > 0).reduce((g, x) => {
+    const k = x.person.toLowerCase(); g[k] ||= { person: x.person, left: 0, n: 0 }; g[k].left += x.left; g[k].n += 1; return g
+  }, {})).sort((a, b) => b.left - a.left)
+  const owedList = pend('owed')
+  const oweList = pend('owe')
   const activeGoals = [...d.goals].filter((g) => !g.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
   const snapshot = () => ({
@@ -142,6 +147,19 @@ export default function Assistant({ d, back }) {
                   </div>
                 ))}
               </div>
+            )}
+
+            {(owedList.length > 0 || oweList.length > 0) && (
+              <>
+                <h2>Deudas pendientes</h2>
+                <div className="list pad">
+                  {owedList.length > 0 && <div className="bar-top"><span>Te deben</span><b className="pos">{cop(d.owedToMe)}</b></div>}
+                  {owedList.map((p) => <div className="bar-top debt-line" key={'o' + p.person}><span>{p.person} <small>({p.n} {p.n === 1 ? 'deuda' : 'deudas'})</small></span><b>{cop(p.left)}</b></div>)}
+                  {oweList.length > 0 && <div className="bar-top" style={owedList.length ? { marginTop: 14 } : undefined}><span>Debes</span><b className="neg">{cop(d.iOwe)}</b></div>}
+                  {oweList.map((p) => <div className="bar-top debt-line" key={'w' + p.person}><span>{p.person} <small>({p.n} {p.n === 1 ? 'deuda' : 'deudas'})</small></span><b>{cop(p.left)}</b></div>)}
+                  <p className="hint">Lo que te deben no cuenta como gasto mientras esté pendiente: esa plata vuelve a ti.</p>
+                </div>
+              </>
             )}
 
             <h2>Metas hoy</h2>

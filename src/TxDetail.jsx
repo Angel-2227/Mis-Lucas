@@ -150,7 +150,7 @@ export default function TxDetail({ id, d, onClose }) {
         )}
         <Field label="Nota"><input className="input" value={f.note} onChange={(e) => set('note', e.target.value)} /></Field>
         <Field label="Fecha"><input className="input" type="date" value={f.date} onChange={(e) => set('date', e.target.value)} /></Field>
-        {t.type === 'expense' && !t.qty && <DebtFields v={f} set={set} d={d} locked={!!debt && debt.paid > 0} />}
+        {t.type === 'expense' && !t.qty && <DebtFields v={f} set={set} d={d} locked={!!debt && (debt.paid > 0 || debt.lost > 0)} />}
         <button className="btn primary wide" disabled={!valid || changes.length === 0} onClick={() => setMode('c1')}>Revisar cambios</button>
         <button className="btn wide" onClick={() => { setF(init(t)); setMode('view') }}>Cancelar</button>
       </Sheet>

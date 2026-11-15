@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
-import { cop, today, monthKey, monthLabel, shiftMonth, dayLabel, navHint } from './lib'
+import { cop, today, monthKey, monthLabel, shiftMonth, dayLabel, navHint, expenseOwn } from './lib'
 import { MonthNav, Empty } from './ui'
 import TxRow from './TxRow'
 import TxDetail from './TxDetail'
@@ -42,10 +42,10 @@ export default function Movements({ d }) {
     .filter((t) => typeOk(t) && (searching ? matches(t) : monthKey(t.date) === month))
     .sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt))
   const sumIn = list.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const sumOut = list.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const sumOut = list.filter((t) => t.type === 'expense').reduce((s, t) => s + expenseOwn(t), 0)
 
   const groups = list.reduce((acc, t) => { (acc[t.date] ||= []).push(t); return acc }, {})
-  const total = list.reduce((s, t) => s + (t.type === 'income' ? t.amount : t.type === 'expense' ? -t.amount : 0), 0)
+  const total = list.reduce((s, t) => s + (t.type === 'income' ? t.amount : t.type === 'expense' ? -expenseOwn(t) : 0), 0)
 
   const remove = (t) => {
     const debt = d.debtMap[t.id]

@@ -116,8 +116,36 @@ export function computeDebts(txs) {
   return txs.filter((t) => t.type === 'expense' && t.debtKind).map((t) => {
     const total = round2(t.debtAmount ?? t.amount)
     const p = paid[t.id] || 0
-    return { id: t.id, tx: t, kind: t.debtKind, person: (t.debtPerson || 'Sin nombre').trim(), total, paid: p, left: round2(Math.max(0, total - p)) }
+    // Si la deuda se dio por perdida (debtLost), ya no está pendiente: pasó a ser gasto.
+    const lost = t.debtKind === 'owed' ? round2(t.debtLost || 0) : 0
+    return { id: t.id, tx: t, kind: t.debtKind, person: (t.debtPerson || 'Sin nombre').trim(), total, paid: p, lost, left: lost > 0 ? 0 : round2(Math.max(0, total - p)) }
   })
+}
+
+// Parte de un gasto que es gasto de verdad. Lo que te deben (préstamos) no lo es: esa plata vuelve.
+// Solo cuenta como gasto si lo diste por perdido (debtLost).
+export function expenseOwn(t) {
+  if (t.type !== 'expense') return 0
+  if (t.debtKind !== 'owed') return t.amount
+  return round2(Math.max(0, t.amount - round2(t.debtAmount ?? t.amount)) + (t.debtLost || 0))
+}
+
+// Gastos reales de un mes, listos para sumar: [{ t, category, amount, date, lost }].
+// La parte perdida cuenta en el mes en que se decidió darla como gasto.
+export function expensesOf(txs, key) {
+  const out = []
+  for (const t of txs) {
+    if (t.type !== 'expense' || !t.date) continue
+    let own = t.amount, lost = 0
+    if (t.debtKind === 'owed') {
+      own = round2(Math.max(0, t.amount - round2(t.debtAmount ?? t.amount)))
+      lost = round2(t.debtLost || 0)
+    }
+    if (own > 0 && t.date.slice(0, 7) === key) out.push({ t, category: t.category, amount: own, date: t.date })
+    const ld = t.debtLostDate || t.date
+    if (lost > 0 && ld.slice(0, 7) === key) out.push({ t, category: t.category, amount: lost, date: ld, lost: true })
+  }
+  return out
 }
 
 // Para abrir Movimientos con un filtro ya elegido (desde Inicio).

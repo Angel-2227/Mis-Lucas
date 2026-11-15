@@ -1,14 +1,16 @@
 import { useState } from 'react'
-import { cop, today, monthKey, monthLabel, shiftMonth, MONTHS_SHORT } from './lib'
+import { cop, today, monthKey, monthLabel, shiftMonth, MONTHS_SHORT, expensesOf } from './lib'
 import { MonthNav, Empty } from './ui'
 
 export default function Analytics({ d, go }) {
   const [month, setMonth] = useState(monthKey(today()))
-  const sum = (key, type) => d.txs.filter((t) => t.type === type && monthKey(t.date) === key).reduce((s, t) => s + t.amount, 0)
+  const sum = (key, type) => type === 'expense'
+    ? expensesOf(d.txs, key).reduce((s, e) => s + e.amount, 0)
+    : d.txs.filter((t) => t.type === type && monthKey(t.date) === key).reduce((s, t) => s + t.amount, 0)
 
-  const exp = d.txs.filter((t) => t.type === 'expense' && monthKey(t.date) === month)
-  const total = exp.reduce((s, t) => s + t.amount, 0)
-  const byCat = Object.entries(exp.reduce((a, t) => { const k = t.category || 'Otros'; a[k] = (a[k] || 0) + t.amount; return a }, {}))
+  const exp = expensesOf(d.txs, month)
+  const total = exp.reduce((s, e) => s + e.amount, 0)
+  const byCat = Object.entries(exp.reduce((a, e) => { const k = e.category || 'Otros'; a[k] = (a[k] || 0) + e.amount; return a }, {}))
     .sort((a, b) => b[1] - a[1])
   const colorOf = (n) => d.settings.categories.find((c) => c.name === n)?.color || '#7F8C8D'
 

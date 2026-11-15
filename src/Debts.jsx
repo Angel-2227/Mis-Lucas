@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Sheet, Field, MoneyInput, Progress } from './ui'
+import { deleteField } from 'firebase/firestore'
 import { cop, today, round2 } from './lib'
 
 // Campos para marcar un gasto como deuda (se usan al crear y al editar).
@@ -87,6 +88,14 @@ export function DebtsPanel({ d, onOpen, onSettle }) {
   const groups = {}
   list.forEach((x) => { (groups[x.person.toLowerCase()] ||= { person: x.person, items: [] }).items.push(x) })
   const people = Object.values(groups).sort((a, b) => a.person.localeCompare(b.person))
+  const writeOff = (x) => {
+    if (!confirm(`¿Dar como gasto lo que falta (${cop(x.left)})? Dejará de aparecer como deuda y contará como gasto de la categoría ${x.tx.category || 'Otros'} este mes.`)) return
+    d.api.update('transactions', x.id, { debtLost: x.left, debtLostDate: today() })
+  }
+  const undoWriteOff = (x) => {
+    if (!confirm('¿Revertir? La deuda vuelve a estar pendiente y deja de contar como gasto.')) return
+    d.api.update('transactions', x.id, { debtLost: deleteField(), debtLostDate: deleteField() })
+  }
   const net = (g) => g.items.reduce((s, x) => s + (x.kind === 'owed' ? x.left : -x.left), 0)
 
   return (
@@ -117,9 +126,13 @@ export function DebtsPanel({ d, onOpen, onSettle }) {
                     <strong>{x.tx.note || x.tx.category || 'Gasto'}</strong>
                     <small>{x.kind === 'owed' ? 'Me deben' : 'Yo debo'} · {x.tx.date}</small>
                     <Progress value={x.paid} max={x.total} />
-                    <small>{showDone ? `Pagada: ${cop(x.total)}` : `Falta ${cop(x.left)} de ${cop(x.total)}`}</small>
+                    <small>{showDone ? (x.lost > 0 ? `Dada como gasto: ${cop(x.lost)}` : `Pagada: ${cop(x.total)}`) : `Falta ${cop(x.left)} de ${cop(x.total)}`}</small>
                   </button>
-                  {!showDone && <button className="btn small primary" onClick={() => onSettle(x)}>{x.kind === 'owed' ? 'Me pagaron' : 'Pagué'}</button>}
+                  <div className="debt-btns">
+                    {!showDone && <button className="btn small primary" onClick={() => onSettle(x)}>{x.kind === 'owed' ? 'Me pagaron' : 'Pagué'}</button>}
+                    {!showDone && x.kind === 'owed' && <button className="btn small" onClick={() => writeOff(x)}>Dar como gasto</button>}
+                    {showDone && x.lost > 0 && <button className="btn small" onClick={() => undoWriteOff(x)}>Revertir</button>}
+                  </div>
                 </div>
               ))}
             </div>

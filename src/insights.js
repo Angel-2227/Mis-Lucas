@@ -1,5 +1,5 @@
 // Cálculos del Asistente. Todo se calcula aquí, en el código; la IA (más adelante) solo interpreta estos números.
-import { monthKey, monthLabel, round2, cop } from './lib'
+import { monthKey, monthLabel, round2, cop, expensesOf } from './lib'
 
 // Totales de un mes. Las transferencias, ajustes de saldo y pagos de deuda no cuentan.
 export function monthStats(txs, key) {
@@ -9,13 +9,17 @@ export function monthStats(txs, key) {
   for (const t of txs) {
     if (!t.date || monthKey(t.date) !== key) continue
     if (t.type === 'income') { income += t.amount; count++ }
-    else if (t.type === 'expense') {
-      expense += t.amount; count++
-      const c = t.category || 'Otros'
-      byCat[c] = (byCat[c] || 0) + t.amount
-      days.add(t.date)
-    } else if (t.type === 'saving') { saved += t.amount; count++ }
+    else if (t.type === 'expense') count++
+    else if (t.type === 'saving') { saved += t.amount; count++ }
     else if (t.type === 'withdraw') { saved -= t.amount; count++ }
+  }
+  // Los préstamos que te deben no son gasto (ver expensesOf en lib.js).
+  for (const e of expensesOf(txs, key)) {
+    expense += e.amount
+    const c = e.category || 'Otros'
+    byCat[c] = (byCat[c] || 0) + e.amount
+    days.add(e.date)
+    if (e.lost && monthKey(e.t.date) !== key) count++
   }
   income = round2(income); expense = round2(expense); saved = round2(saved)
   Object.keys(byCat).forEach((k) => (byCat[k] = round2(byCat[k])))

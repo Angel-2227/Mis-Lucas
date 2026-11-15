@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank, Bus, Smartphone, Landmark, Star, Sparkles } from 'lucide-react'
-import { cop, today, monthKey, monthLabel, shiftMonth, BRANDS, navHint } from './lib'
+import { cop, today, monthKey, monthLabel, shiftMonth, BRANDS, navHint, expensesOf } from './lib'
 import { monthStats } from './insights'
 import { Empty } from './ui'
 import { useGate, CardNumber } from './Vault'
@@ -98,7 +98,7 @@ export default function Home({ d, go, openAdd }) {
   const cur = monthKey(today())
   const month = txs.filter((t) => monthKey(t.date) === cur)
   const inc = month.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-  const exp = month.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+  const exp = expensesOf(txs, cur).reduce((s, e) => s + e.amount, 0)
   const sav = month.filter((t) => t.type === 'saving').reduce((s, t) => s + t.amount, 0) - month.filter((t) => t.type === 'withdraw').reduce((s, t) => s + t.amount, 0)
   const monthNum = Number(cur.slice(5))
 
