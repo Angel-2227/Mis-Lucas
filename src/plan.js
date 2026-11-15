@@ -17,6 +17,8 @@ export function baseline(txs) {
   return { n, income, expense, margin, byCat, suggested: Math.max(0, Math.floor(margin / 10000) * 10000) }
 }
 
+const target0 = (g, left) => (g.target > 0 ? Math.min(1, Math.max(0, 1 - left / g.target)) : 1)
+
 // Simula mes a mes (máx. 5 años). Primero cubre la cuota que necesitan las metas con fecha límite,
 // luego reparte lo que sobra: 'priority' = una por una según el orden; 'split' = en partes iguales.
 export function simulate(goals, saved, monthly, mode) {
@@ -26,6 +28,7 @@ export function simulate(goals, saved, monthly, mode) {
   const left = [...left0]
   const dIdx = goals.map((g) => (g.deadline ? Number(g.deadline.slice(0, 4)) * 12 + Number(g.deadline.slice(5, 7)) - (cy * 12 + cm) : null))
   const first = goals.map(() => 0)
+  const hist = []
   const eta = left.map((l) => (l <= 0.5 ? 0 : null))
   for (let i = 0; i < 60; i++) {
     if (eta.every((e) => e !== null)) break
@@ -55,6 +58,7 @@ export function simulate(goals, saved, monthly, mode) {
       if (i === 0) first[k] = Math.round(alloc[k])
       if (left[k] <= 0.5 && eta[k] === null) eta[k] = i
     })
+    hist.push(left.slice())
   }
   return goals.map((g, k) => ({
     id: g.id, name: g.name, target: g.target, saved: saved[g.id] || 0, left: round2(left0[k]),
@@ -63,6 +67,8 @@ export function simulate(goals, saved, monthly, mode) {
     eta: eta[k], // meses desde el actual (0 = este mes); null = más de 5 años
     etaLabel: eta[k] === null ? null : monthLabel(shiftMonth(now, eta[k])),
     onTime: g.deadline && eta[k] !== null ? eta[k] <= dIdx[k] : g.deadline ? false : null,
+    deadlineIdx: dIdx[k],
+    curve: [target0(g, left0[k]), ...hist.map((h) => (g.target > 0 ? Math.min(1, Math.max(0, 1 - h[k] / g.target)) : 1))],
     perMonthForDeadline: g.deadline && left0[k] > 0 ? Math.ceil(left0[k] / Math.max(1, dIdx[k] + 1)) : null,
   }))
 }

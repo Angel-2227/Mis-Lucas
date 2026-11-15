@@ -6,15 +6,7 @@ import { monthStats, compareMonths, notes } from './insights'
 import { askAdvice, buildPayload, parseAdvice } from './ai'
 import Chat from './Chat'
 import Plan from './Plan'
-
-function Delta({ r }) {
-  if (r.prev === 0 && r.cur === 0) return <span className="delta flat">-</span>
-  if (r.pct === null) return <span className="delta flat">nuevo</span>
-  const rounded = Math.round(r.pct)
-  if (rounded === 0) return <span className="delta flat">igual</span>
-  const good = r.good ? (r.good === 'up') === (r.diff > 0) : null
-  return <span className={'delta ' + (good === null ? 'flat' : good ? 'good' : 'bad')}>{r.diff > 0 ? '+' : ''}{rounded}%</span>
-}
+import { Donut, PairBars, CatBars, AdviceView, PALETTE } from './charts'
 
 export default function Assistant({ d, back, openAdd }) {
   const cur = monthKey(today())
@@ -26,6 +18,10 @@ export default function Assistant({ d, back, openAdd }) {
   const prev = monthStats(d.txs, prevKey)
   const { totals, cats } = compareMonths(stats, prev)
   const list = notes(stats, prev)
+  const pairs = totals.filter((r) => r.name !== 'Apartado para metas' || r.cur > 0 || r.prev > 0)
+  const catSorted = Object.entries(stats.byCat).sort((a, b) => b[1] - a[1])
+  const donutData = [...catSorted.slice(0, 5).map(([name, value]) => ({ name, value, color: colorOf(name) })),
+    ...(catSorted.length > 5 ? [{ name: 'Otros', value: catSorted.slice(5).reduce((x, [, v]) => x + v, 0), color: '#B9C9A4' }] : [])]
   const closed = month < cur
   const colorOf = (n) => d.settings.categories.find((c) => c.name === n)?.color || '#7F8C8D'
   const pend = (kind) => Object.values(d.debts.filter((x) => x.kind === kind && x.left > 0).reduce((g, x) => {
@@ -95,59 +91,37 @@ export default function Assistant({ d, back, openAdd }) {
               <small>Ingresos {cop(stats.income)} · Gastos {cop(stats.expense)}</small>
             </section>
 
-            <h2>Interpretación de la IA</h2>
+            <h2>Análisis de la IA</h2>
             <div className="list pad ai-card">
-              {adv && (adv.raw ? <p>{adv.raw}</p> : (
-                <>
-                  {adv.resumen && <p className="ai-sum">{adv.resumen}</p>}
-                  {adv.obs.length > 0 && <><h4 className="ai-h">Observaciones</h4><ul className="notes">{adv.obs.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
-                  {adv.sug.length > 0 && <><h4 className="ai-h">Sugerencias</h4><ul className="notes">{adv.sug.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
-                </>
-              ))}
-              {!adv && <p className="hint" style={{ marginTop: 0 }}>Pide a la IA que interprete estos números y te sugiera dónde ahorrar.</p>}
+              {adv ? <AdviceView adv={adv} colorOf={colorOf} /> : <p className="hint" style={{ marginTop: 0 }}>Pide a la IA un análisis corto de este mes, con los recortes que te sugiere.</p>}
               {err && <p className="err">{err}</p>}
               <button className="btn wide" disabled={busy || stats.count === 0} onClick={generate}>{busy ? 'Analizando...' : adv ? 'Regenerar análisis' : 'Generar análisis'}</button>
               <p className="hint">Se envían tus totales por categoría, tus movimientos agrupados con sus notas, tus metas y quién te debe. Nunca números de tarjeta. Son sugerencias de una IA, no asesoría financiera profesional.</p>
             </div>
 
-            <h2>Lo más notable</h2>
-            {list.length === 0 ? <p className="hint">Aún no hay suficiente información para comparar.</p> : (
-              <ul className="notes list pad">
-                {list.map((n, i) => <li key={i}>{n}</li>)}
-              </ul>
-            )}
+            <h2>¿En qué se fue el dinero?</h2>
+            <div className="list pad">
+              {donutData.length === 0 ? <p className="hint" style={{ margin: 0 }}>No hay gastos en este mes.</p> : <Donut data={donutData} total={stats.expense} label="Gastos" />}
+            </div>
 
             <h2>Contra {monthLabel(prevKey).split(' ')[0]}</h2>
             <div className="list pad">
-              {totals.map((r) => (
-                <div className="cmp-row" key={r.name}>
-                  <div><span>{r.name}</span><small className="cmp-prev">antes {cop(r.prev)}</small></div>
-                  <b>{cop(r.cur)}</b>
-                  <Delta r={r} />
-                </div>
-              ))}
-              <div className="cmp-row">
-                <div><span>Promedio por día con gastos</span><small className="cmp-prev">antes {cop(prev.expenseDays ? prev.expense / prev.expenseDays : 0)}</small></div>
-                <b>{cop(stats.expenseDays ? stats.expense / stats.expenseDays : 0)}</b><span />
-              </div>
+              <PairBars rows={pairs} curLabel={monthLabel(month).split(' ')[0]} prevLabel={monthLabel(prevKey).split(' ')[0]} />
+              <p className="hint" style={{ marginBottom: 0 }}>Los préstamos que te deben no cuentan como gasto mientras estén pendientes.</p>
             </div>
+
+            {list.length > 0 && (
+              <details className="more">
+                <summary>Ver lo más notable en texto</summary>
+                <ul className="notes">{list.map((n, i) => <li key={i}>{n}</li>)}</ul>
+              </details>
+            )}
           </div>
 
           <div>
             <h2>Gasto por categoría</h2>
             {cats.length === 0 ? <Empty title="Sin gastos" text="No hay gastos en estos meses." /> : (
-              <div className="list pad">
-                {cats.map((r) => (
-                  <div className="bar-row" key={r.name}>
-                    <div className="cmp-row flush">
-                      <div><span>{r.name}</span><small className="cmp-prev">antes {cop(r.prev)}</small></div>
-                      <b>{cop(r.cur)}</b>
-                      <Delta r={{ ...r, good: 'down' }} />
-                    </div>
-                    <div className="progress"><i style={{ width: (r.cur / (cats[0].cur || 1)) * 100 + '%', background: colorOf(r.name) }} /></div>
-                  </div>
-                ))}
-              </div>
+              <div className="list pad"><CatBars rows={cats} colorOf={colorOf} /></div>
             )}
 
             {(owedList.length > 0 || oweList.length > 0) && (

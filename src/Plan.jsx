@@ -4,6 +4,7 @@ import { MoneyInput, Progress, Empty } from './ui'
 import { monthStats } from './insights'
 import { baseline, simulate } from './plan'
 import { askAdvice, buildPlanPayload, parseAdvice } from './ai'
+import { StackBar, Lines, AdviceView, PALETTE, short } from './charts'
 
 export default function Plan({ d, openAdd }) {
   const goals = useMemo(() => [...d.goals].filter((g) => !g.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [d.goals])
@@ -18,8 +19,20 @@ export default function Plan({ d, openAdd }) {
   const monthly = Number(val) || 0
   const plan = useMemo(() => simulate(goals, d.savedByGoal, monthly, mode), [goals, d.savedByGoal, monthly, mode])
   const dirty = !saved || saved.monthly !== monthly || saved.mode !== mode
-  const doneThisMonth = monthStats(d.txs, monthKey(today())).saved
+  const now = monthKey(today())
+  const doneThisMonth = monthStats(d.txs, now).saved
   const adv = text ? parseAdvice(text) : null
+  const colorOf = (n) => d.settings.categories.find((c) => c.name === n)?.color || '#7F8C8D'
+  const color = (i) => PALETTE[i % PALETTE.length]
+
+  const unfinished = plan.filter((p) => p.left > 0)
+  const maxEta = Math.max(0, ...plan.map((p) => (p.eta === null ? 0 : p.eta)))
+  const horizon = plan.some((p) => p.left > 0 && p.eta === null) ? 36 : Math.min(36, Math.max(3, maxEta + 2))
+  const series = plan.map((p, i) => ({
+    name: p.name, color: color(i), deadline: p.deadline ? p.deadlineIdx : null,
+    points: Array.from({ length: horizon + 1 }, (_, j) => p.curve[Math.min(j, p.curve.length - 1)]),
+  })).filter((s, i) => plan[i].left > 0)
+  const parts = plan.map((p, i) => ({ name: p.name, value: p.thisMonth, color: color(i) })).filter((p) => p.value > 0)
 
   const save = () => d.api.saveSettings({ plan: { monthly, mode } })
   const generate = async () => {
@@ -38,27 +51,29 @@ export default function Plan({ d, openAdd }) {
         <div className="list pad">
           <MoneyInput value={val} onChange={setVal} />
           {base.n > 0 ? (
-            <p className="hint">En los últimos {base.n} {base.n === 1 ? 'mes cerrado' : 'meses cerrados'} ingresaste {cop(base.income)} al mes en promedio y gastaste {cop(base.expense)}: te sobran {cop(base.margin)}.
-              {base.suggested !== monthly && base.suggested > 0 && <> <button className="link" onClick={() => setVal(String(base.suggested))}>Usar {cop(base.suggested)}</button></>}</p>
+            <div className="plan-base">
+              <div><small>Ingresas</small><b className="pos">{short(base.income)}</b></div>
+              <div><small>Gastas</small><b className="neg">{short(base.expense)}</b></div>
+              <div><small>Te sobra</small><b>{short(base.margin)}</b></div>
+            </div>
           ) : <p className="hint">Aún no hay meses cerrados con datos. Escribe cuánto quieres ahorrar al mes.</p>}
-          <div className="seg" style={{ marginTop: 12 }}>
+          {base.n > 0 && <p className="hint" style={{ marginTop: 0 }}>Promedio de los últimos {base.n} {base.n === 1 ? 'mes cerrado' : 'meses cerrados'}.{base.suggested !== monthly && base.suggested > 0 && <> <button className="link" onClick={() => setVal(String(base.suggested))}>Usar {cop(base.suggested)}</button></>}</p>}
+          <div className="seg" style={{ marginTop: 10 }}>
             <button className={mode === 'priority' ? 'on' : ''} onClick={() => setMode('priority')}>Por prioridad</button>
             <button className={mode === 'split' ? 'on' : ''} onClick={() => setMode('split')}>Repartir</button>
           </div>
-          <p className="hint">{mode === 'priority' ? 'Termina una meta antes de pasar a la siguiente, en el orden de la pestaña Metas.' : 'Reparte el ahorro en partes iguales entre todas las metas.'} Las metas con fecha límite reciben primero la cuota que necesitan.</p>
-          {dirty && <button className="btn primary wide" style={{ marginTop: 4 }} onClick={save}>Guardar este plan</button>}
+          {dirty && <button className="btn primary wide" style={{ marginTop: 10 }} onClick={save}>Guardar este plan</button>}
           {doneThisMonth > 0 && <p className="hint">Este mes ya apartaste {cop(doneThisMonth)}.</p>}
+        </div>
+
+        <h2>Cómo se reparte este mes</h2>
+        <div className="list pad">
+          {parts.length === 0 ? <p className="hint" style={{ margin: 0 }}>{monthly <= 0 ? 'Escribe cuánto vas a ahorrar para ver el reparto.' : 'Este mes no hay aportes por repartir.'}</p> : <StackBar parts={parts} />}
         </div>
 
         <h2>Recomendaciones de la IA</h2>
         <div className="list pad ai-card">
-          {adv && (adv.raw ? <p>{adv.raw}</p> : (
-            <>
-              {adv.resumen && <p className="ai-sum">{adv.resumen}</p>}
-              {adv.sug.length > 0 && <><h4 className="ai-h">Sugerencias</h4><ul className="notes">{adv.sug.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
-            </>
-          ))}
-          {!adv && <p className="hint" style={{ marginTop: 0 }}>Pide a la IA que interprete tu plan y te diga dónde recortar para llegar antes.</p>}
+          {adv ? <AdviceView adv={adv} colorOf={colorOf} /> : <p className="hint" style={{ marginTop: 0 }}>Pide a la IA dónde recortar para llegar antes a tus metas.</p>}
           {err && <p className="err">{err}</p>}
           <button className="btn wide" disabled={busy || monthly <= 0} onClick={generate}>{busy ? 'Analizando...' : adv ? 'Regenerar recomendaciones' : 'Generar recomendaciones'}</button>
           <p className="hint">Las fechas y cuotas las calcula la app; la IA solo las interpreta. Son sugerencias, no asesoría financiera profesional.</p>
@@ -66,23 +81,30 @@ export default function Plan({ d, openAdd }) {
       </div>
 
       <div>
+        <h2>Avance proyectado</h2>
+        <div className="list pad">
+          {series.length === 0 ? <p className="hint" style={{ margin: 0 }}>Ya tienes el dinero de todas tus metas.</p> : (
+            <>
+              <Lines series={series} now={now} />
+              <div className="leg-rows">{plan.map((p, i) => p.left > 0 && <div key={p.id}><i className="dot" style={{ background: color(i) }} /><span>{p.name}</span><small className="muted">{p.etaLabel ? 'termina ' + p.etaLabel.split(' ')[0] + ' ' + p.etaLabel.slice(-4) : 'más de 5 años'}</small></div>)}</div>
+              {plan.some((p) => p.deadline && p.left > 0) && <p className="hint" style={{ marginBottom: 0 }}>La línea punteada marca la fecha límite de la meta.</p>}
+            </>
+          )}
+        </div>
+
         <h2>Tus metas</h2>
         {plan.map((p, i) => (
-          <div className={'goal' + (i === 0 ? ' focus' : '')} key={p.id}>
-            <div className="goal-head"><strong>{p.name}</strong></div>
+          <div className="goal" key={p.id} style={{ borderLeft: `6px solid ${color(i)}` }}>
+            <div className="goal-head"><strong>{p.name}</strong><b>{Math.round((p.saved / p.target) * 100) || 0}%</b></div>
             <Progress value={p.saved} max={p.target} />
-            <div className="goal-nums"><span>{cop(p.saved)} de {cop(p.target)}</span><b>{Math.round((p.saved / p.target) * 100) || 0}%</b></div>
-            {p.left <= 0 ? <small className="muted">Ya tienes el dinero de esta meta.</small> : (
+            <div className="goal-nums"><span>{short(p.saved)} de {short(p.target)}</span></div>
+            {p.left <= 0 ? <span className="badge good">Dinero completo</span> : (
               <>
-                <small className="muted">
-                  {p.thisMonth > 0 ? `Aparta ${cop(p.thisMonth)} este mes. ` : 'Este mes no le toca aporte. '}
-                  {p.etaLabel ? (p.eta === 0 ? 'La completas este mes.' : `La completas en ${p.etaLabel}.`) : 'Con este ahorro tardarías más de 5 años.'}
-                </small>
-                {p.deadline && (
-                  <small className={p.onTime ? 'pos' : 'neg'} style={{ display: 'block', marginTop: 4 }}>
-                    {p.onTime ? 'Llegas a tiempo a tu fecha límite.' : `Para llegar a tiempo necesitas ${cop(p.perMonthForDeadline)} al mes solo para esta meta.`}
-                  </small>
-                )}
+                <div className="badges">
+                  <span className="badge">{p.thisMonth > 0 ? `Este mes: ${short(p.thisMonth)}` : 'Este mes: $ 0'}</span>
+                  {p.etaLabel && <span className="badge">{p.eta === 0 ? 'Completa este mes' : 'Completa: ' + p.etaLabel.split(' ')[0]}</span>}
+                  {p.deadline && (p.onTime ? <span className="badge good">A tiempo</span> : <span className="badge bad">Faltan {short(Math.max(0, p.perMonthForDeadline - p.thisMonth))} al mes</span>)}
+                </div>
                 <div className="goal-btns"><button className="btn small primary" onClick={() => openAdd({ type: 'saving', goalId: p.id })}>Aportar</button></div>
               </>
             )}

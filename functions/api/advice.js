@@ -47,11 +47,12 @@ function summaryMessages(data) {
     JSON.stringify(data),
     '',
     'Responde exactamente con este formato, sin markdown:',
-    'RESUMEN: (2 a 3 frases sobre cómo le fue frente al mes anterior)',
+    'RESUMEN: (una sola frase de máximo 25 palabras sobre cómo le fue frente al mes anterior)',
     'OBSERVACIONES:',
-    '- (3 a 4 viñetas con hallazgos concretos apoyados en los datos)',
+    '- (3 viñetas de máximo 14 palabras cada una, cada una con una cifra del JSON)',
     'SUGERENCIAS:',
-    '- (2 a 3 viñetas con acciones concretas y alcanzables para el próximo mes, citando categorías o metas)',
+    '- Categoría | monto mensual que podría recortar (solo dígitos, en pesos) | acción en máximo 10 palabras',
+    '(2 a 4 líneas con ese formato exacto, montos realistas según el detalle; usa "General" si no aplica a una categoría)',
     'Si "parcial" es true, el mes aún no termina: dilo en el resumen y no concluyas como si estuviera cerrado.',
   ].join('\n')
   return [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }]
@@ -63,9 +64,10 @@ function planMessages(data) {
     JSON.stringify(data),
     '',
     'Responde exactamente con este formato, sin markdown:',
-    'RESUMEN: (2 a 3 frases: si el ahorro mensual alcanza y cuándo llegaría a cada meta, citando fechas del JSON)',
+    'RESUMEN: (una sola frase de máximo 30 palabras: si el ahorro mensual alcanza y cuándo llegaría a las metas, citando fechas del JSON)',
     'SUGERENCIAS:',
-    '- (3 a 4 viñetas con acciones concretas para ahorrar más o llegar antes: categorías y montos que podría recortar según gastoPromedioPorCategoria y el detalle, y si conviene cambiar el orden de las metas)',
+    '- Categoría | monto mensual que podría recortar (solo dígitos, en pesos) | acción en máximo 10 palabras',
+    '(3 a 4 líneas con ese formato exacto, según gastoPromedioPorCategoria y el detalle; usa "General" si no aplica a una categoría)',
     'No recalcules fechas ni cuotas: usa las del JSON. Si aTiempo es false para una meta con fecha límite, dilo y di cuánto más al mes haría falta usando cuotaMensualParaLlegarAFecha.',
   ].join('\n')
   return [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }]

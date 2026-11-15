@@ -87,7 +87,7 @@ export async function askAdvice(user, kind, data, messages) {
 
 // Convierte el texto del modelo en secciones. Si no respeta el formato, devuelve el texto tal cual en "raw".
 export function parseAdvice(text) {
-  const out = { resumen: '', obs: [], sug: [], raw: '' }
+  const out = { resumen: '', obs: [], sug: [], cuts: [], raw: '' }
   let sec = 'res'
   for (const line of String(text || '').split('\n')) {
     const t = line.replace(/\*\*/g, '').trim()
@@ -97,10 +97,13 @@ export function parseAdvice(text) {
     if (/^SUGERENCIAS\s*:?/i.test(t)) { sec = 'sug'; continue }
     const item = t.replace(/^[-*•]\s*/, '')
     if (sec === 'obs') out.obs.push(item)
-    else if (sec === 'sug') out.sug.push(item)
+    else if (sec === 'sug' && item.includes('|')) {
+      const [cat, amt, ...rest] = item.split('|').map((x) => x.trim())
+      out.cuts.push({ cat: cat || 'General', amount: Number(String(amt).replace(/\D/g, '')) || 0, action: rest.join(' ') })
+    } else if (sec === 'sug') out.sug.push(item)
     else out.resumen += (out.resumen ? ' ' : '') + item
   }
-  if (!out.resumen && !out.obs.length && !out.sug.length) out.raw = String(text || '')
+  if (!out.resumen && !out.obs.length && !out.sug.length && !out.cuts.length) out.raw = String(text || '')
   return out
 }
 
