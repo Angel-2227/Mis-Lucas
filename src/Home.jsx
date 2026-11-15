@@ -32,7 +32,7 @@ const BRAND_CLS = { nu: 'b-nu', davivienda: 'b-davi', daviplata: 'b-daviplata', 
 // Logo: usa /logos/<marca>.svg o .png si existe; si no, un ícono sencillo.
 function BrandLogo({ brand, type }) {
   const [i, setI] = useState(0)
-  const exts = ['svg', 'png']
+  const exts = ['png', 'svg']
   if (brand && i < exts.length) return <img className="blogo" src={`/logos/${brand}.${exts[i]}`} alt="" onError={() => setI(i + 1)} />
   if (brand === 'nu') return <span className="blogo-text">nu</span>
   const Icon = brand === 'cash' ? Banknote : brand === 'daviplata' ? Smartphone : type === 'sitp' ? Bus : brand === 'davivienda' ? Landmark : null
