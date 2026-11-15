@@ -320,3 +320,21 @@ small,.muted{color:var(--muted);font-size:12.5px}
   .pin{width:24px;height:24px}
 }
 .swatch.b-nu{background:#820AD1}.swatch.b-davi,.swatch.b-daviplata{background:#E1251B}.swatch.b-nequi{background:#2A0A4D}.swatch.b-tullave{background:#0B5BD6}.swatch.b-cash{background:#2E9E5B}.swatch.b-sitp{background:#1F8A5B}
+
+/* ---- Inicio en tablet y escritorio ---- */
+@media (min-width:768px){
+  .cards-scroll{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;overflow:visible;scroll-snap-type:none;padding:0;margin:10px 0 0}
+  .cards-scroll .bcard,.cards-scroll.all .bcard{flex:none;max-width:none;min-height:190px}
+  .h-cards .cards-head{margin-top:22px}
+}
+@media (min-width:1000px){
+  .home-grid{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);grid-template-areas:"hero side" "cards recent";gap:8px 28px}
+  .h-hero{grid-area:hero}
+  .h-side{grid-area:side}
+  .h-cards{grid-area:cards}
+  .h-recent{grid-area:recent}
+  .h-side>:first-child,.h-recent>h2:first-child{margin-top:0}
+  .h-cards .cards-head{margin-top:14px}
+  .h-recent h2{margin-top:14px}
+  .h-side .stats3{margin-top:0}
+}

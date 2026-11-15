@@ -122,8 +122,7 @@ export default function Home({ d, go, openAdd }) {
       </header>
 
       <div className="home-grid">
-      <div className="col">
-      <section className="hero">
+      <section className="hero h-hero">
         <small>Disponible para gastar</small>
         <div className="hero-num">{cop(d.available)}</div>
         <div className="hero-split">
@@ -133,6 +132,7 @@ export default function Home({ d, go, openAdd }) {
         </div>
       </section>
 
+      <div className="h-cards">
       {accounts.length === 0 ? (
         <Empty title="Aún no tienes cuentas" text="Agrega efectivo, tu tarjeta débito o tu tarjeta SITP."
           action={<button className="btn primary" onClick={() => go('settings')}>Ir a Ajustes</button>} />
@@ -158,9 +158,9 @@ export default function Home({ d, go, openAdd }) {
           )}
         </>
       )}
-
       </div>
-      <div className="col">
+
+      <div className="h-side">
       {pending.map((r) => (
         <div className="pending" key={r.id}>
           <div><strong>{r.name} de este mes</strong><small>{cop(r.amount)} sin registrar</small></div>
@@ -182,6 +182,9 @@ export default function Home({ d, go, openAdd }) {
         </button>
       )}
 
+      </div>
+
+      <div className="h-recent">
       <h2>Últimos movimientos</h2>
       <div className="list">
         {recent.length === 0 ? <Empty title="Sin movimientos" text="Toca el botón + para registrar el primero." />
