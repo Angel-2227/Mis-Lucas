@@ -176,7 +176,7 @@ function Main({ user }) {
         {tab === 'moves' && <Movements d={d} />}
         {tab === 'goals' && <Goals d={d} openAdd={openAdd} />}
         {tab === 'stats' && <Analytics d={d} go={go} />}
-        {tab === 'assistant' && <Assistant d={d} back={() => go('home')} />}
+        {tab === 'assistant' && <Assistant d={d} back={() => go('home')} openAdd={openAdd} />}
         {tab === 'settings' && <Settings d={d} back={() => go('home')} />}
       </main>
       <nav className="bottom-nav">

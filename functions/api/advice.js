@@ -57,6 +57,20 @@ function summaryMessages(data) {
   return [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }]
 }
 
+function planMessages(data) {
+  const user = [
+    'Plan de ahorro ya calculado por la app (JSON):',
+    JSON.stringify(data),
+    '',
+    'Responde exactamente con este formato, sin markdown:',
+    'RESUMEN: (2 a 3 frases: si el ahorro mensual alcanza y cuándo llegaría a cada meta, citando fechas del JSON)',
+    'SUGERENCIAS:',
+    '- (3 a 4 viñetas con acciones concretas para ahorrar más o llegar antes: categorías y montos que podría recortar según gastoPromedioPorCategoria y el detalle, y si conviene cambiar el orden de las metas)',
+    'No recalcules fechas ni cuotas: usa las del JSON. Si aTiempo es false para una meta con fecha límite, dilo y di cuánto más al mes haría falta usando cuotaMensualParaLlegarAFecha.',
+  ].join('\n')
+  return [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }]
+}
+
 function chatMessages(data, history) {
   const system = [
     SYSTEM,
@@ -84,6 +98,7 @@ export async function onRequestPost({ request, env }) {
   if (!body.data || typeof body.data !== 'object') return json({ error: 'bad_request' }, 400)
   let messages
   if (body.kind === 'summary') messages = summaryMessages(body.data)
+  else if (body.kind === 'plan') messages = planMessages(body.data)
   else if (body.kind === 'chat') {
     const history = (Array.isArray(body.messages) ? body.messages : [])
       .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())

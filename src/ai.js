@@ -150,3 +150,25 @@ export function buildChatContext(d) {
   }
   return ctx
 }
+
+// Payload del plan de ahorro: el plan ya viene calculado; la IA solo lo interpreta.
+export function buildPlanPayload(d, base, plan, monthly, mode) {
+  const cur = monthKey(today())
+  return {
+    ahorroMensualElegido: monthly,
+    modo: mode === 'split' ? 'repartir en partes iguales' : 'una meta a la vez por prioridad',
+    mesesPromediados: base.n,
+    ingresoPromedioMensual: base.income,
+    gastoPromedioMensual: base.expense,
+    margenPromedio: base.margin,
+    gastoPromedioPorCategoria: base.byCat,
+    disponibleHoy: d.available,
+    deudasPendientes: pendingDebts(d),
+    metas: plan.map((p) => ({
+      nombre: p.name, precio: p.target, ahorrado: p.saved, faltante: p.left, fechaLimite: p.deadline,
+      aporteSugeridoEsteMes: p.thisMonth, llegariaEn: p.etaLabel || 'mas de 5 anos', aTiempo: p.onTime,
+      cuotaMensualParaLlegarAFecha: p.perMonthForDeadline,
+    })),
+    detalleUltimoMesCerrado: detail(d, shiftMonth(cur, -1), 6),
+  }
+}
