@@ -143,7 +143,6 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .cards-head h2{margin:0}
 .link{color:var(--ink);text-decoration:underline;font-size:14px;margin-left:14px}
 .cards-head+.cards-scroll{margin-top:10px}
-.pin{color:#fff;opacity:.85;display:grid;place-items:center;width:28px;height:28px}
 .cards-scroll.all{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));overflow:visible;margin:10px 0 0;padding:0}
 .cards-scroll.all .acard{max-width:none}
 
@@ -191,45 +190,10 @@ small,.muted{color:var(--muted);font-size:12.5px}
 }
 
 /* ---------- Tarjetas estilo bancario ---------- */
-.b-nu{background:radial-gradient(circle at 88% 12%,#ffffff26,transparent 42%),linear-gradient(135deg,#9B4FE0,#6A2BAE)}
-.b-davi{background:radial-gradient(circle at 92% 95%,#0000002e 0 24%,transparent 25%),linear-gradient(135deg,#E8272C,#B3111A)}
-.b-daviplata{background:radial-gradient(circle at 100% 100%,#00000026 0 38%,transparent 39%),linear-gradient(135deg,#DD2027,#A80F18)}
-.b-nequi{background:linear-gradient(315deg,#E6139E 0 15%,transparent 15.1%),linear-gradient(135deg,#19D3E6 0 9%,transparent 9.1%),#1C0640}
-.b-tullave{background:radial-gradient(circle at 100% 100%,#ffffff14 0 42%,transparent 43%),radial-gradient(circle at 100% 100%,#ffffff0e 0 62%,transparent 63%),linear-gradient(135deg,#0B5BD6,#07409F)}
-.b-cash{background:linear-gradient(135deg,#6368BD,#3F4392)}
-.bcard.b-custom{background:linear-gradient(135deg,#ffffff1c,#00000030),var(--c)}
 
-.bcard{position:relative;overflow:hidden;color:#fff;border-radius:22px;padding:16px 18px;aspect-ratio:1.586;min-height:178px;display:grid;grid-template-rows:auto 1fr auto;box-shadow:0 10px 24px #0e1b142e}
-.cards-scroll .bcard{flex:0 0 78%;max-width:320px;scroll-snap-align:start}
-.cards-scroll.all .bcard{max-width:none}
-.bcard-top,.bcard-bot{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
-.bcard-bot{align-items:flex-end}
-.bcard-icons{display:flex;align-items:center;gap:6px}
-.wordmark{display:block;font:800 21px var(--font-d);letter-spacing:-.02em}
-.b-nu .wordmark{text-transform:lowercase;font-size:30px;line-height:.9}
-.b-cash .wordmark{font-size:17px}
-.bname{display:block;color:#ffffffb3;font-size:12px}
-.bcard-mid{display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;z-index:1}
-.bcard-mid small{color:#ffffffb3;font-size:11.5px}
-.bcard-bal{font:700 27px var(--font-d);letter-spacing:-.02em}
-.chip-row{display:flex;align-items:center;gap:8px;margin-top:6px}
-.chip-ic{width:34px;height:25px;border-radius:6px;background:linear-gradient(135deg,#e9e9ec,#a9a9b0);box-shadow:inset 0 0 0 1px #00000026}
-.nfc{transform:rotate(90deg);opacity:.9}
-.watermark{position:absolute;right:-14px;bottom:-14px;opacity:.16;transform:rotate(-12deg)}
-.bcard .fare-line{margin-top:6px}
-.cnum{display:flex;align-items:center;gap:2px;font:600 14px var(--font-b);letter-spacing:.08em}
-.cnum button{color:inherit;opacity:.85;display:grid;place-items:center;width:26px;height:26px;border-radius:50%}
-.owner{display:block;color:#ffffffcc;font-size:12.5px;margin-top:2px}
-.bcard-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-.bcard-right small{color:#ffffffcc;font-size:12px}
-.mc{display:inline-flex}
-.mc i{width:24px;height:24px;border-radius:50%;background:#EB001B}
-.mc i+i{background:#F79E1B;margin-left:-9px;opacity:.95}
-.visa{font:italic 800 19px var(--font-d);letter-spacing:.02em}
 .numline{display:flex;align-items:center;justify-content:space-between;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:6px 8px 6px 14px}
 .err{color:var(--red);font-size:13.5px;margin:10px 2px 0}
 .swatch{background-size:cover}
-@media (min-width:768px){.bcard{flex:0 0 300px}.cards-scroll .bcard{flex:0 0 310px;max-width:none}.cards-scroll.all .bcard{flex:none}}
 
 /* ---------- Enlaces e imagen de metas ---------- */
 .goal-img{display:block;width:100%;height:150px;object-fit:contain;background:#fff;border-radius:14px;margin-bottom:12px}
@@ -256,7 +220,6 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .debt-pill.owed{background:#2E9E5B22;color:var(--green)}
 .debt-pill.owe{background:#D9482B22;color:var(--red)}
 .debt-pill.done{background:var(--line);color:var(--muted)}
-.bcard-saved{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:12px;margin-top:6px;background:#ffffff26;border-radius:99px;padding:5px 10px;width:fit-content;max-width:100%}
 .debt-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0;width:100%;text-align:left}
 .debt-sum>div{background:var(--paper);border-radius:18px;padding:12px}
 .debt-sum b{display:block;font-size:16px;margin-top:3px}
@@ -283,38 +246,76 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .diff span{color:var(--muted)} .diff s{color:var(--red);opacity:.8} .diff b{color:var(--green)}
 .seg button:disabled{opacity:.5}
 
-/* ---- Tarjetas v2: dos por vista en celular, sin cortes ---- */
-.bcard{aspect-ratio:auto;min-height:178px}
-.cnum{flex-wrap:wrap}
-.debt-sum{padding:0}
+/* ---- Tarjetas v3: diseño claro con acento por marca ---- */
+.bcard{--ink:#14201A;--muted:#14201A99;--accent:#13241B;--tint:#F3F5F2;position:relative;overflow:hidden;color:var(--ink);border-radius:22px;padding:14px 16px;min-height:178px;display:grid;grid-template-rows:auto 1fr auto;gap:6px;background:linear-gradient(160deg,#fff,var(--tint));box-shadow:0 8px 20px #0e1b141f,0 0 0 1px #0e1b140a}
+.bcard::before,.bcard::after{content:"";position:absolute;border-radius:50%;background:var(--accent);pointer-events:none}
+.bcard::before{right:-34%;bottom:-46%;width:84%;aspect-ratio:1;opacity:.16}
+.bcard::after{right:-20%;bottom:-40%;width:52%;aspect-ratio:1;opacity:.3}
+.b-nu{--accent:#820AD1;--tint:#F1E8FA}
+.b-davi,.b-daviplata{--accent:#E1251B;--tint:#FCE9E8}
+.b-tullave{--accent:#0B5BD6;--tint:#E7EFFC}
+.b-cash{--accent:#2E9E5B;--tint:#E9F4ED}
+.b-sitp{--accent:#1F8A5B;--tint:#E8F4EE}
+.b-nequi{--ink:#fff;--muted:#ffffffb8;--accent:#E6139E;--tint:#210843;background:linear-gradient(150deg,#4B1D78,#210843);box-shadow:0 8px 20px #1c064040}
+.b-nequi::before{opacity:.22}.b-nequi::after{opacity:.85}
+.bcard.b-custom{--accent:var(--c);--tint:color-mix(in srgb,var(--c) 12%,#fff)}
+.bcard-top,.bcard-bot{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;position:relative;z-index:1}
+.bcard-bot{align-items:flex-end}
+.bcard-title{min-width:0;flex:1}
+.bcard-title strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font:700 15px/1.2 var(--font-d);letter-spacing:-.01em}
+.bcard-title small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.blogo{height:30px;max-width:56px;object-fit:contain;flex:none}
+.blogo-text{font:800 30px/1 var(--font-d);letter-spacing:-.04em;color:var(--accent);flex:none}
+.blogo-ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--accent);color:#fff;flex:none}
+.bcard-mid{display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;z-index:1}
+.bcard-mid small{color:var(--muted);font-size:11.5px}
+.bcard-bal{font:700 26px var(--font-d);letter-spacing:-.02em;white-space:nowrap}
+.bcard-saved{display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center;font-size:11.5px;font-weight:600;margin-top:5px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--ink);border-radius:99px;padding:4px 10px;width:fit-content;max-width:100%}
+.bcard-saved svg{color:var(--accent)}
+.b-nequi .bcard-saved{background:#ffffff26}.b-nequi .bcard-saved svg{color:#fff}
 .bcard-saved span{white-space:nowrap}
+.chip-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.chip-ic{width:32px;height:23px;border-radius:6px;background:linear-gradient(135deg,#e9e9ec,#a9a9b0);box-shadow:inset 0 0 0 1px #00000026}
+.nfc{transform:rotate(90deg);opacity:.55}
+.watermark{position:absolute;right:-12px;bottom:-12px;color:var(--accent);opacity:.18;transform:rotate(-12deg)}
+.bcard .fare-line{margin-top:6px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;font-size:12.5px;color:var(--ink)}
+.bcard .fare-line .btn{background:color-mix(in srgb,var(--accent) 16%,#fff);color:var(--accent);font-weight:700}
+.bcard-id{min-width:0}
+.cnum{display:flex;flex-wrap:wrap;align-items:center;gap:2px;font:600 13.5px var(--font-b);letter-spacing:.06em}
+.cnum button{color:inherit;opacity:.7;display:grid;place-items:center;width:26px;height:26px;border-radius:50%}
+.owner{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.bcard-right{display:flex;align-items:center;gap:6px;color:var(--ink)}
+.bcard-right small{font-size:11.5px;font-weight:600;color:var(--accent)}
+.b-nequi .bcard-right small{color:#ffffffcc}
+.pin{color:var(--ink);opacity:.7;display:grid;place-items:center;width:26px;height:26px}
+.mc{display:inline-flex}
+.mc i{width:20px;height:20px;border-radius:50%;background:#EB001B}
+.mc i+i{background:#F79E1B;margin-left:-8px;opacity:.95}
+.visa{font:italic 800 17px var(--font-d);letter-spacing:.02em;color:#1A1F71}
+.b-nequi .visa{color:#fff}
+.cards-scroll .bcard{flex:0 0 78%;max-width:320px;scroll-snap-align:start}
+.cards-scroll.all .bcard{max-width:none}
+@media (min-width:768px){.cards-scroll .bcard{flex:0 0 310px;max-width:none}.cards-scroll.all .bcard{flex:none}}
 @media (max-width:767px){
   .cards-scroll{margin:12px 0 0;padding:4px 0 22px;margin-bottom:-14px;gap:10px;scroll-snap-type:x mandatory}
-  .cards-scroll .bcard{flex:0 0 calc((100% - 10px) / 2);max-width:none;scroll-snap-align:start;scroll-snap-stop:always;padding:12px;min-height:168px;border-radius:18px;box-shadow:0 6px 14px #0e1b1426}
+  .cards-scroll .bcard{flex:0 0 calc((100% - 10px) / 2);max-width:none;scroll-snap-align:start;scroll-snap-stop:always;padding:12px;min-height:172px;border-radius:18px}
   .cards-scroll.one .bcard{flex-basis:100%}
   .cards-scroll.all{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:visible;padding:4px 0 8px;margin:12px 0 0}
   .cards-scroll.all .bcard{flex:none}
-  .bcard-top>div:first-child{min-width:0;flex:1}
-  .wordmark{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .b-nu .wordmark{font-size:23px}
-  .b-cash .wordmark{font-size:14px}
-  .bname{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bcard-icons{gap:2px}
-  .pin{width:24px;height:24px}
+  .bcard-title strong{font-size:14px}
+  .blogo{height:24px;max-width:38px}.blogo-text{font-size:24px}.blogo-ic{width:26px;height:26px;border-radius:8px}
+  .bcard-bal{font-size:clamp(15px,4.8vw,19px)}
   .bcard-mid small{font-size:10.5px}
-  .bcard-bal{font-size:clamp(14px,4.6vw,18px);white-space:nowrap}
-  .bcard-saved{font-size:10.5px;padding:3px 8px;gap:4px;margin-top:5px}
+  .bcard-saved{font-size:10.5px;padding:3px 8px;gap:4px}
   .hide-sm{display:none}
-  .chip-ic{width:26px;height:19px}
-  .nfc{width:15px;height:15px}
-  .bcard .fare-line{flex-direction:column;align-items:stretch;gap:5px;font-size:11px}
+  .chip-ic{width:26px;height:19px}.nfc{width:15px;height:15px}
+  .bcard .fare-line{font-size:11px;gap:5px;align-items:stretch}
   .bcard .fare-line .btn{padding:6px 8px;font-size:12px}
-  .bcard-bot{flex-direction:column;align-items:flex-start;gap:3px}
-  .bcard-right{flex-direction:row;align-items:center;gap:6px}
-  .bcard-right small{font-size:10.5px}
-  .cnum{font-size:12px;letter-spacing:.04em;gap:0}
-  .cnum button{width:24px;height:24px}
+  .bcard-bot{flex-direction:column;align-items:stretch;gap:2px}
+  .bcard-right{justify-content:space-between;gap:4px}
+  .cnum{font-size:12px;letter-spacing:.03em;gap:0}.cnum button{width:24px;height:24px}
   .owner{font-size:11px}
-  .mc i{width:18px;height:18px} .mc i+i{margin-left:-7px}
-  .visa{font-size:15px}
+  .mc i{width:16px;height:16px}.mc i+i{margin-left:-6px}.visa{font-size:14px}
+  .pin{width:24px;height:24px}
 }
+.swatch.b-nu{background:#820AD1}.swatch.b-davi,.swatch.b-daviplata{background:#E1251B}.swatch.b-nequi{background:#2A0A4D}.swatch.b-tullave{background:#0B5BD6}.swatch.b-cash{background:#2E9E5B}.swatch.b-sitp{background:#1F8A5B}

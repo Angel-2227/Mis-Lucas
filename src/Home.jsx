@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank } from 'lucide-react'
+import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank, Bus, Smartphone, Landmark } from 'lucide-react'
 import { cop, today, monthKey, BRANDS, navHint } from './lib'
 import { Empty } from './ui'
 import { useGate, CardNumber } from './Vault'
@@ -14,19 +14,43 @@ function Network({ n }) {
   return null
 }
 
+const norm = (x) => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+// Si la cuenta no tiene marca elegida, se deduce del nombre para que tome su diseño.
+function brandKey(a) {
+  if (a.brand && BRANDS[a.brand]) return a.brand
+  const n = norm(a.name)
+  if (n.includes('daviplata')) return 'daviplata'
+  if (n.includes('davivienda') || /\bdavi\b/.test(n)) return 'davivienda'
+  if (n.includes('nequi')) return 'nequi'
+  if (n.includes('tullave')) return 'tullave'
+  if (/\bnu\b/.test(n)) return 'nu'
+  if (a.type === 'cash') return 'cash'
+  return ''
+}
+const BRAND_CLS = { nu: 'b-nu', davivienda: 'b-davi', daviplata: 'b-daviplata', nequi: 'b-nequi', tullave: 'b-tullave', cash: 'b-cash', sitp: 'b-sitp' }
+
+// Logo: usa /logos/<marca>.svg o .png si existe; si no, un ícono sencillo.
+function BrandLogo({ brand, type }) {
+  const [i, setI] = useState(0)
+  const exts = ['svg', 'png']
+  if (brand && i < exts.length) return <img className="blogo" src={`/logos/${brand}.${exts[i]}`} alt="" onError={() => setI(i + 1)} />
+  if (brand === 'nu') return <span className="blogo-text">nu</span>
+  const Icon = brand === 'cash' ? Banknote : brand === 'daviplata' ? Smartphone : type === 'sitp' ? Bus : brand === 'davivienda' ? Landmark : null
+  return Icon ? <span className="blogo-ic"><Icon size={17} /></span> : null
+}
+
 function AccountCard({ a, balance, saved, fare, onFare, pinned, onPin, run }) {
-  const b = BRANDS[a.brand || (a.type === 'cash' ? 'cash' : '')]
+  const key = a.type === 'sitp' && !brandKey(a) ? 'sitp' : brandKey(a)
+  const label = key === 'sitp' ? 'SITP' : BRANDS[key]?.label
+  const sub = label && !norm(a.name).includes(norm(label)) ? label : ''
   const isCash = a.type === 'cash'
-  const showName = b && a.name.trim().toLowerCase() !== b.label.toLowerCase()
+  const WM = isCash ? Banknote : a.type === 'sitp' ? Bus : null
   return (
-    <div className={'bcard ' + (b ? b.cls : 'b-custom')} style={b ? undefined : { '--c': a.color || '#13241B' }}>
-      {isCash && <Banknote className="watermark" size={120} />}
+    <div className={'bcard ' + (BRAND_CLS[key] || 'b-custom')} style={BRAND_CLS[key] ? undefined : { '--c': a.color || '#13241B' }}>
+      {WM && <WM className="watermark" size={110} />}
       <div className="bcard-top">
-        <div><span className="wordmark">{b ? b.label : a.name}</span>{showName && <small className="bname">{a.name}</small>}</div>
-        <div className="bcard-icons">
-          {a.locked && <Lock size={14} />}
-          <button className="pin" onClick={onPin} aria-label={pinned ? 'Quitar de inicio' : 'Fijar en inicio'}><Pin size={16} fill={pinned ? 'currentColor' : 'none'} /></button>
-        </div>
+        <div className="bcard-title"><strong>{a.name}</strong>{sub && <small>{sub}</small>}</div>
+        <BrandLogo brand={key} type={a.type} />
       </div>
       <div className="bcard-mid">
         <small>{a.type === 'credit' ? 'Deuda actual' : 'Disponible'}</small>
@@ -37,16 +61,18 @@ function AccountCard({ a, balance, saved, fare, onFare, pinned, onPin, run }) {
             <span>{Math.max(0, Math.floor(balance / fare))} pasajes de {cop(fare)}</span>
             <button className="btn small" onClick={onFare}>Usar pasaje</button>
           </div>
-        ) : !isCash && <div className="chip-row"><i className="chip-ic" /><Wifi size={18} className="nfc" /></div>}
+        ) : !isCash && a.type !== 'sitp' && <div className="chip-row"><i className="chip-ic" /><Wifi size={18} className="nfc" /></div>}
       </div>
       <div className="bcard-bot">
-        <div>
+        <div className="bcard-id">
           <CardNumber a={a} run={run} />
           {a.owner && <span className="owner">{a.owner}</span>}
         </div>
         <div className="bcard-right">
+          {a.locked && <Lock size={13} />}
           {TYPE_LABEL[a.type] && <small>{TYPE_LABEL[a.type]}</small>}
           <Network n={a.network} />
+          <button className="pin" onClick={onPin} aria-label={pinned ? 'Quitar de inicio' : 'Fijar en inicio'}><Pin size={16} fill={pinned ? 'currentColor' : 'none'} /></button>
         </div>
       </div>
     </div>
