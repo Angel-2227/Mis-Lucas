@@ -37,6 +37,8 @@ const SYSTEM = [
   'Usa SOLO las cifras del JSON que recibes. No calcules, no estimes y no inventes números nuevos.',
   'Responde en español de Colombia, directo y sin emojis. Montos en pesos con el formato $ 1.234.000.',
   'Eres una guía de ahorro, no un asesor financiero profesional.',
+  'Los préstamos pendientes por cobrar no son gasto: no los cuentes como gasto ni como déficit y menciónalos aparte (deudasPendientes).',
+  'El campo "detalle" trae, por mes, los gastos por categoría y los ingresos como listas de [nota, veces, total]: "veces" es cuántas veces se repitió esa nota. Úsalo para dar recomendaciones concretas.',
 ].join(' ')
 
 function summaryMessages(data) {
@@ -76,7 +78,7 @@ export async function onRequestPost({ request, env }) {
   if (uid !== env.ALLOWED_UID) return json({ error: 'forbidden' }, 403)
 
   const raw = await request.text()
-  if (raw.length > 20000) return json({ error: 'too_big' }, 413)
+  if (raw.length > 40000) return json({ error: 'too_big' }, 413)
   let body
   try { body = JSON.parse(raw) } catch { return json({ error: 'bad_request' }, 400) }
   if (!body.data || typeof body.data !== 'object') return json({ error: 'bad_request' }, 400)
@@ -92,7 +94,7 @@ export async function onRequestPost({ request, env }) {
   } else return json({ error: 'bad_request' }, 400)
 
   const model = env.GROQ_MODEL || 'openai/gpt-oss-120b'
-  const payload = { model, messages, temperature: 0.4, max_completion_tokens: 2000 }
+  const payload = { model, messages, temperature: 0.4, max_completion_tokens: body.kind === 'chat' ? 1200 : 2000 }
   if (model.includes('gpt-oss')) payload.reasoning_effort = 'low'
 
   const ctl = new AbortController()

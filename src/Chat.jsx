@@ -32,7 +32,7 @@ export default function Chat({ d, msgs, setMsgs }) {
     <div className="chat">
       {msgs.length === 0 ? (
         <div className="list pad">
-          <p className="hint" style={{ marginTop: 0 }}>Pregúntame sobre tus gastos, tus metas o cuánto puedes ahorrar. Respondo con tus datos de los últimos meses.</p>
+          <p className="hint" style={{ marginTop: 0 }}>Pregúntame sobre tus gastos, tus metas o cuánto puedes ahorrar. Respondo con tus movimientos de los últimos meses, categoría por categoría.</p>
           <div className="chips">{IDEAS.map((q) => <button key={q} className="chip" onClick={() => send(q)}>{q}</button>)}</div>
         </div>
       ) : (
@@ -47,7 +47,7 @@ export default function Chat({ d, msgs, setMsgs }) {
         <button className="btn primary" disabled={busy || !text.trim()} aria-label="Enviar"><Send size={18} /></button>
       </form>
       <div className="chat-foot">
-        <small className="muted">Se envían totales, metas y deudas, sin tarjetas, notas ni nombres. Son sugerencias de una IA, no asesoría financiera profesional.</small>
+        <small className="muted">Se envían tus movimientos agrupados por categoría con sus notas, tus metas y quién te debe. Nunca números de tarjeta. Son sugerencias de una IA, no asesoría financiera profesional.</small>
         {msgs.length > 0 && <button className="link" onClick={() => { setMsgs([]); setErr('') }}><Trash2 size={13} /> Nueva conversación</button>}
       </div>
       <div ref={end} />

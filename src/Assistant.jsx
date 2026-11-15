@@ -106,7 +106,7 @@ export default function Assistant({ d, back }) {
               {!adv && <p className="hint" style={{ marginTop: 0 }}>Pide a la IA que interprete estos números y te sugiera dónde ahorrar.</p>}
               {err && <p className="err">{err}</p>}
               <button className="btn wide" disabled={busy || stats.count === 0} onClick={generate}>{busy ? 'Analizando...' : adv ? 'Regenerar análisis' : 'Generar análisis'}</button>
-              <p className="hint">Se envían solo totales por categoría y mes, tus metas y tus totales de deudas. Nunca números de tarjeta, notas ni nombres. Son sugerencias de una IA, no asesoría financiera profesional.</p>
+              <p className="hint">Se envían tus totales por categoría, tus movimientos agrupados con sus notas, tus metas y quién te debe. Nunca números de tarjeta. Son sugerencias de una IA, no asesoría financiera profesional.</p>
             </div>
 
             <h2>Lo más notable</h2>

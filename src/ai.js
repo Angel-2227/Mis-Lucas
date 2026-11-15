@@ -1,9 +1,41 @@
 // Cliente del Asistente: arma el resumen que se envía a la IA y lee su respuesta.
-// Nunca se envían números de tarjeta, notas de movimientos ni nombres de personas.
-import { monthLabel, monthKey, shiftMonth, today } from './lib'
+// Se envían montos, categorías, notas y nombres de deudas (decisión del dueño). Nunca números de tarjeta.
+import { monthLabel, monthKey, shiftMonth, today, expensesOf, round2 } from './lib'
 import { compareMonths, monthStats } from './insights'
 
 const snap = (s) => ({ ingresos: s.income, gastos: s.expense, apartadoParaMetas: s.saved, balance: s.balance, gastoPorCategoria: s.byCat })
+
+// ---- Detalle de movimientos, agrupado para gastar pocos tokens ----
+const norm = (s) => String(s || '').trim().toLowerCase()
+function addGroup(map, note, amount) {
+  const k = norm(note) || '(sin nota)'
+  const g = map.get(k) || { n: String(note || '').trim().slice(0, 40) || '(sin nota)', c: 0, t: 0 }
+  g.c += 1; g.t = round2(g.t + amount)
+  map.set(k, g)
+}
+function toList(map, cap) {
+  const arr = [...map.values()].sort((a, b) => b.t - a.t)
+  const out = arr.slice(0, cap).map((g) => [g.n, g.c, g.t])
+  const rest = arr.slice(cap)
+  if (rest.length) out.push([`otros (${rest.length} notas distintas)`, rest.reduce((s, g) => s + g.c, 0), round2(rest.reduce((s, g) => s + g.t, 0))])
+  return out
+}
+// Por mes: gastos por categoría y ingresos, cada uno como lista de [nota, veces, total].
+export function detail(d, key, cap) {
+  const cats = {}
+  for (const e of expensesOf(d.txs, key)) {
+    const c = e.category || 'Otros'
+    addGroup((cats[c] ||= new Map()), e.t.note, e.amount)
+  }
+  const gastos = {}
+  Object.keys(cats).forEach((c) => (gastos[c] = toList(cats[c], cap)))
+  const inc = new Map()
+  d.txs.filter((t) => t.type === 'income' && t.date && monthKey(t.date) === key).forEach((t) => addGroup(inc, t.note, t.amount))
+  return { gastos, ingresos: toList(inc, Math.min(cap, 6)) }
+}
+const pendingDebts = (d) => d.debts.filter((x) => x.left > 0).slice(0, 15).map((x) => ({
+  persona: x.person, tipo: x.kind === 'owed' ? 'me deben' : 'yo debo', pendiente: x.left, deTotal: x.total, motivo: String(x.tx.note || x.tx.category || '').slice(0, 40),
+}))
 
 export function buildPayload(d, month, cur, prev, closed) {
   const { cats } = compareMonths(cur, prev)
@@ -20,6 +52,8 @@ export function buildPayload(d, month, cur, prev, closed) {
     teDeben: d.owedToMe,
     debes: d.iOwe,
     gastosFijosMensuales: fixed,
+    deudasPendientes: pendingDebts(d),
+    detalle: { [monthLabel(month)]: detail(d, month, 8), [monthLabel(shiftMonth(month, -1))]: detail(d, shiftMonth(month, -1), 5) },
   }
 }
 
@@ -83,7 +117,7 @@ export function buildChatContext(d) {
   })
   const now = monthStats(d.txs, cur)
   const rec = d.settings.recurring || []
-  return {
+  const ctx = {
     hoy: t,
     diaDelMes: day,
     diasDelMes: daysInMonth,
@@ -106,5 +140,13 @@ export function buildChatContext(d) {
       }
       return o
     }),
+    deudasPendientes: pendingDebts(d),
   }
+  // El detalle se recorta por niveles hasta que el contexto quepa en el límite de tokens de Groq.
+  const LEVELS = [[12, 6, 6], [8, 4, 4], [5, 3, 3], [3, 2, 2]]
+  for (const caps of LEVELS) {
+    ctx.detalle = Object.fromEntries([0, -1, -2].map((n, i) => [monthLabel(shiftMonth(cur, n)), detail(d, shiftMonth(cur, n), caps[i])]))
+    if (JSON.stringify(ctx).length <= 9000) break
+  }
+  return ctx
 }
