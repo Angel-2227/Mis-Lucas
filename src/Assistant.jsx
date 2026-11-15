@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react'
 import { cop, today, monthKey, monthLabel, shiftMonth } from './lib'
 import { MonthNav, Empty, Progress } from './ui'
 import { monthStats, compareMonths, notes } from './insights'
+import { askAdvice, buildPayload, parseAdvice } from './ai'
 
 function Delta({ r }) {
   if (r.prev === 0 && r.cur === 0) return <span className="delta flat">-</span>
@@ -25,15 +26,36 @@ export default function Assistant({ d, back }) {
   const colorOf = (n) => d.settings.categories.find((c) => c.name === n)?.color || '#7F8C8D'
   const activeGoals = [...d.goals].filter((g) => !g.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
+  const snapshot = () => ({
+    month, income: stats.income, expense: stats.expense, saved: stats.saved, balance: stats.balance,
+    byCat: stats.byCat, savedAt: Date.now(),
+  })
+
   // Al ver un mes cerrado con movimientos, se guarda su resumen. Inicio deja de avisar de ese mes.
   const known = d.summaries.some((s) => s.id === month)
   useEffect(() => {
     if (!closed || stats.count === 0 || known) return
-    d.api.saveSummary(month, {
-      month, income: stats.income, expense: stats.expense, saved: stats.saved, balance: stats.balance,
-      byCat: stats.byCat, savedAt: Date.now(),
-    })
+    d.api.saveSummary(month, snapshot())
   }, [month, closed, stats.count, known])
+
+  // Texto de la IA: en meses cerrados se guarda en Firestore; en el mes en curso solo vive en pantalla.
+  const [local, setLocal] = useState({})
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  useEffect(() => { setErr('') }, [month])
+  const stored = d.summaries.find((s) => s.id === month)?.ai
+  const aiText = stored?.text || local[month]
+  const adv = aiText ? parseAdvice(aiText) : null
+
+  const generate = async () => {
+    setBusy(true); setErr('')
+    try {
+      const text = await askAdvice(d.user, 'summary', buildPayload(d, month, stats, prev, closed))
+      if (closed) await d.api.saveSummary(month, { ...snapshot(), ai: { text, at: Date.now() } })
+      else setLocal((p) => ({ ...p, [month]: text }))
+    } catch (e) { setErr(e.message || 'No se pudo generar el análisis.') }
+    setBusy(false)
+  }
 
   return (
     <div className="page">
@@ -61,6 +83,21 @@ export default function Assistant({ d, back }) {
               <div className="hero-num">{cop(stats.balance)}</div>
               <small>Ingresos {cop(stats.income)} · Gastos {cop(stats.expense)}</small>
             </section>
+
+            <h2>Interpretación de la IA</h2>
+            <div className="list pad ai-card">
+              {adv && (adv.raw ? <p>{adv.raw}</p> : (
+                <>
+                  {adv.resumen && <p className="ai-sum">{adv.resumen}</p>}
+                  {adv.obs.length > 0 && <><h4 className="ai-h">Observaciones</h4><ul className="notes">{adv.obs.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+                  {adv.sug.length > 0 && <><h4 className="ai-h">Sugerencias</h4><ul className="notes">{adv.sug.map((x, i) => <li key={i}>{x}</li>)}</ul></>}
+                </>
+              ))}
+              {!adv && <p className="hint" style={{ marginTop: 0 }}>Pide a la IA que interprete estos números y te sugiera dónde ahorrar.</p>}
+              {err && <p className="err">{err}</p>}
+              <button className="btn wide" disabled={busy || stats.count === 0} onClick={generate}>{busy ? 'Analizando...' : adv ? 'Regenerar análisis' : 'Generar análisis'}</button>
+              <p className="hint">Se envían solo totales por categoría y mes, tus metas y tus totales de deudas. Nunca números de tarjeta, notas ni nombres. Son sugerencias de una IA, no asesoría financiera profesional.</p>
+            </div>
 
             <h2>Lo más notable</h2>
             {list.length === 0 ? <p className="hint">Aún no hay suficiente información para comparar.</p> : (
@@ -120,7 +157,6 @@ export default function Assistant({ d, back }) {
           </div>
         </div>
       )}
-      <p className="hint">Son cálculos de tus propios movimientos. Más adelante la IA agregará aquí su interpretación.</p>
     </div>
   )
 }
