@@ -6,12 +6,14 @@ import { useGate, useUnlocked } from './Vault'
 import * as V from './vault'
 import { bioSupported, bioEnabled, bioEnable, bioDisable } from './biometric'
 import { Sheet, Field, MoneyInput, CatDot } from './ui'
+import ReconcileSheet from './Reconcile'
 
 function AccountForm({ d, acc, onSave, onDelete, onClose }) {
   const [f, setF] = useState({ type: 'debit', name: '', owner: '', locked: false, color: ACCOUNT_COLORS[0], brand: '', network: '', ...acc, initial: String(acc?.initial ?? '') })
   const [editNum, setEditNum] = useState(false)
   const [numInput, setNumInput] = useState('')
   const [run, gate] = useGate(d)
+  const [reconcile, setReconcile] = useState(false)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
   const last4 = acc?.last4 || (acc?.number ? String(acc.number).slice(-4) : '')
   const isCard = f.type !== 'cash'
@@ -31,6 +33,7 @@ function AccountForm({ d, acc, onSave, onDelete, onClose }) {
   }
 
   return (
+    <>
     <Sheet title={acc ? 'Editar cuenta' : 'Nueva cuenta'} onClose={onClose}>
       {gate}
       <Field label="Tipo">
@@ -71,9 +74,12 @@ function AccountForm({ d, acc, onSave, onDelete, onClose }) {
         </>
       )}
       <label className="check"><input type="checkbox" checked={!!f.locked} onChange={(e) => set('locked', e.target.checked)} /> Dinero apartado: no cuenta como disponible</label>
+      {acc && <button className="btn wide" onClick={() => setReconcile(true)}>Ajustar al saldo real</button>}
       <button className="btn primary wide" disabled={!f.name.trim()} onClick={save}>Guardar</button>
       {acc && <button className="btn wide danger" onClick={() => { if (confirm('¿Eliminar cuenta? Sus movimientos quedarán sin cuenta.')) { onDelete(); onClose() } }}>Eliminar cuenta</button>}
     </Sheet>
+    {reconcile && <ReconcileSheet d={d} acc={acc} onClose={() => setReconcile(false)} />}
+    </>
   )
 }
 
@@ -127,23 +133,46 @@ function SecurityCard({ d }) {
   )
 }
 
-function RecurringForm({ r, d, onSave, onDelete, onClose }) {
-  const [f, setF] = useState({ name: '', accountId: '', skipMonths: [], ...r, amount: String(r?.amount ?? '') })
+function RecurringForm({ r, kind = 'income', d, onSave, onDelete, onClose }) {
+  const isExp = (r?.kind || kind) === 'expense'
+  const [f, setF] = useState({ name: '', accountId: '', skipMonths: [], category: d.settings.categories[0]?.name || '', day: '', ...r, amount: String(r?.amount ?? ''), day: String(r?.day ?? '') })
   const toggle = (m) => setF((p) => ({ ...p, skipMonths: p.skipMonths.includes(m) ? p.skipMonths.filter((x) => x !== m) : [...p.skipMonths, m] }))
+  const day = Math.min(31, Math.max(1, Math.round(Number(f.day) || 0)))
+  const save = () => {
+    const data = { id: f.id || 'r' + Date.now(), name: f.name.trim(), amount: Number(f.amount), accountId: f.accountId, skipMonths: f.skipMonths }
+    if (isExp) { data.kind = 'expense'; data.category = f.category; if (f.day) data.day = day }
+    onSave(data); onClose()
+  }
   return (
-    <Sheet title="Ingreso recurrente" onClose={onClose}>
-      <Field label="Nombre"><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Beca, apoyo familiar, trabajo" /></Field>
+    <Sheet title={isExp ? 'Gasto fijo' : 'Ingreso recurrente'} onClose={onClose}>
+      <Field label="Nombre"><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={isExp ? 'Plan de celular, suscripción, arriendo' : 'Beca, apoyo familiar, trabajo'} /></Field>
       <Field label="Monto mensual"><MoneyInput value={f.amount} onChange={(v) => setF({ ...f, amount: v })} /></Field>
-      <Field label="Llega a">
+      <Field label={isExp ? 'Se paga desde' : 'Llega a'}>
         <select className="input" value={f.accountId} onChange={(e) => setF({ ...f, accountId: e.target.value })}>
-          <option value="">Primera cuenta</option>
+          <option value="">{isExp ? 'Tarjeta predeterminada' : 'Primera cuenta'}</option>
           {d.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </Field>
-      <Field label="Meses en que NO llega">
+      {isExp && (
+        <>
+          <Field label="Categoría">
+            <div className="chips">
+              {d.settings.categories.map((c) => (
+                <button key={c.name} type="button" className={'chip' + (f.category === c.name ? ' on' : '')}
+                  style={f.category === c.name ? { background: c.color, borderColor: c.color } : {}} onClick={() => setF({ ...f, category: c.name })}>{c.name}</button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Día de pago (opcional)">
+            <input className="input" type="number" inputMode="numeric" min="1" max="31" value={f.day} onChange={(e) => setF({ ...f, day: e.target.value })} placeholder="Ej: 15" />
+            <p className="hint">Te aparece en Inicio desde 3 días antes de esa fecha para que lo pagues o lo omitas.</p>
+          </Field>
+        </>
+      )}
+      <Field label={isExp ? 'Meses en que NO se paga' : 'Meses en que NO llega'}>
         <div className="chips">{MONTHS_SHORT.map((m, i) => <button key={m} className={'chip' + (f.skipMonths.includes(i + 1) ? ' on' : '')} onClick={() => toggle(i + 1)}>{m}</button>)}</div>
       </Field>
-      <button className="btn primary wide" disabled={!f.name.trim() || !Number(f.amount)} onClick={() => { onSave({ id: f.id || 'r' + Date.now(), name: f.name.trim(), amount: Number(f.amount), accountId: f.accountId, skipMonths: f.skipMonths }); onClose() }}>Guardar</button>
+      <button className="btn primary wide" disabled={!f.name.trim() || !Number(f.amount)} onClick={save}>Guardar</button>
       {r && <button className="btn wide danger" onClick={() => { onDelete(); onClose() }}>Eliminar</button>}
     </Sheet>
   )
@@ -232,10 +261,21 @@ export default function Settings({ d, back }) {
       <div className="blk">
       <div className="sec-head"><h2>Ingresos recurrentes</h2><button className="btn small primary" onClick={() => setRecForm({})}><Plus size={16} /> Agregar</button></div>
       <div className="list">
-        {settings.recurring.map((r) => (
+        {settings.recurring.filter((r) => r.kind !== 'expense').map((r) => (
           <button className="row btn-row" key={r.id} onClick={() => setRecForm(r)}>
             <div className="row-main"><strong>{r.name}</strong><small>{r.skipMonths.length ? 'No llega en: ' + r.skipMonths.map((m) => MONTHS_SHORT[m - 1]).join(', ') : 'Todos los meses'}</small></div>
             <b className="amt">{cop(r.amount)}</b>
+          </button>
+        ))}
+      </div>
+
+      <div className="sec-head" style={{ marginTop: 22 }}><h2>Gastos fijos</h2><button className="btn small primary" onClick={() => setRecForm({ kind: 'expense' })}><Plus size={16} /> Agregar</button></div>
+      <div className="list">
+        {settings.recurring.filter((r) => r.kind === 'expense').length === 0 && <p className="hint pad">Plan de celular, suscripciones, arriendo... se registran con un toque cada mes.</p>}
+        {settings.recurring.filter((r) => r.kind === 'expense').map((r) => (
+          <button className="row btn-row" key={r.id} onClick={() => setRecForm(r)}>
+            <div className="row-main"><strong>{r.name}</strong><small>{r.day ? `Día ${r.day}` : 'Sin día fijo'} · {r.category || 'Otros'}{r.skipMonths.length ? ' · no en ' + r.skipMonths.map((m) => MONTHS_SHORT[m - 1]).join(', ') : ''}</small></div>
+            <b className="amt neg">{cop(r.amount)}</b>
           </button>
         ))}
       </div>
@@ -267,7 +307,7 @@ export default function Settings({ d, back }) {
       {accForm && <AccountForm d={d} acc={accForm.id ? accForm : null} onClose={() => setAccForm(null)}
         onSave={(data) => (accForm.id ? api.update('accounts', accForm.id, 'numberEnc' in data ? { ...data, number: deleteField() } : data) : api.add('accounts', data))}
         onDelete={() => api.remove('accounts', accForm.id)} />}
-      {recForm && <RecurringForm r={recForm.id ? recForm : null} d={d} onClose={() => setRecForm(null)} onSave={saveRec}
+      {recForm && <RecurringForm r={recForm.id ? recForm : null} kind={recForm.kind || 'income'} d={d} onClose={() => setRecForm(null)} onSave={saveRec}
         onDelete={() => api.saveSettings({ recurring: settings.recurring.filter((x) => x.id !== recForm.id) })} />}
     </div>
   )

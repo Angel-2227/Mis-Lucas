@@ -102,20 +102,27 @@ function Main({ user }) {
   const d = useMemo(() => {
     const bal = computeBalances(accounts, txs)
     const savedByGoal = {}
+    // Aportes suman y retiros restan. Un retiro libera el dinero sin moverlo de la cuenta.
     txs.filter((t) => t.type === 'saving').forEach((t) => (savedByGoal[t.goalId] = (savedByGoal[t.goalId] || 0) + t.amount))
-    Object.keys(savedByGoal).forEach((k) => (savedByGoal[k] = round2(savedByGoal[k])))
+    txs.filter((t) => t.type === 'withdraw').forEach((t) => (savedByGoal[t.goalId] = (savedByGoal[t.goalId] || 0) - t.amount))
+    Object.keys(savedByGoal).forEach((k) => (savedByGoal[k] = round2(Math.max(0, savedByGoal[k]))))
     const reserved = round2(goals.filter((g) => !g.done).reduce((s, g) => s + (savedByGoal[g.id] || 0), 0))
     const money = accounts.filter((a) => a.type !== 'sitp') // el saldo SITP solo sirve para pasajes
     // Ahorro por tarjeta: el dinero de metas guardado en una cuenta sigue ahí, pero queda "en ahorro".
     const activeGoalIds = new Set(goals.filter((g) => !g.done).map((g) => g.id))
     const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
     const savedByAccount = {}
-    let reservedFree = 0
-    txs.filter((t) => t.type === 'saving' && activeGoalIds.has(t.goalId)).forEach((t) => {
+    txs.filter((t) => (t.type === 'saving' || t.type === 'withdraw') && activeGoalIds.has(t.goalId)).forEach((t) => {
       const a = accById[t.accountId]
-      if (a) savedByAccount[a.id] = round2((savedByAccount[a.id] || 0) + t.amount)
-      if (!a || (!a.locked && a.type !== 'sitp')) reservedFree = round2(reservedFree + t.amount)
+      if (a) savedByAccount[a.id] = round2((savedByAccount[a.id] || 0) + (t.type === 'saving' ? t.amount : -t.amount))
     })
+    let lockedSaved = 0
+    Object.keys(savedByAccount).forEach((k) => {
+      savedByAccount[k] = Math.max(0, savedByAccount[k])
+      const a = accById[k]
+      if (a.locked || a.type === 'sitp') lockedSaved = round2(lockedSaved + savedByAccount[k])
+    })
+    const reservedFree = round2(Math.max(0, reserved - lockedSaved))
     const debts = computeDebts(txs)
     const debtMap = Object.fromEntries(debts.map((x) => [x.id, x]))
     const owedToMe = round2(debts.filter((x) => x.kind === 'owed').reduce((s, x) => s + x.left, 0))

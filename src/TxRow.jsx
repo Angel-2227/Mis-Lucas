@@ -1,4 +1,4 @@
-import { Trash2, ArrowLeftRight, PiggyBank, ArrowDownLeft, Handshake, Eye } from 'lucide-react'
+import { Trash2, ArrowLeftRight, PiggyBank, ArrowDownLeft, Handshake, Eye, Scale, Undo2 } from 'lucide-react'
 import { CatDot } from './ui'
 import { cop } from './lib'
 
@@ -19,6 +19,13 @@ export default function TxRow({ t, d, onDelete, onOpen }) {
   } else if (t.type === 'settle') {
     icon = <span className="cat-dot" style={{ background: '#8E44AD22', color: '#8E44AD' }}><Handshake size={20} /></span>
     title = 'Pago de deuda'; sub = `${t.person || ''} - ${acc(t.accountId)}`; amt = (t.dir === 'in' ? '+' : '-') + cop(t.amount); cls = t.dir === 'in' ? 'pos' : 'neg'
+  } else if (t.type === 'adjust') {
+    icon = <span className="cat-dot" style={{ background: '#6B728022', color: '#4B5563' }}><Scale size={20} /></span>
+    title = 'Ajuste de saldo'; sub = acc(t.accountId); amt = (t.dir === 'in' ? '+' : '-') + cop(t.amount); cls = t.dir === 'in' ? 'pos' : 'neg'
+  } else if (t.type === 'withdraw') {
+    const g = d.goals.find((x) => x.id === t.goalId)
+    icon = <span className="cat-dot" style={{ background: '#F2A90022', color: '#C98A00' }}><Undo2 size={20} /></span>
+    title = 'Retiro de meta'; sub = (g?.name || 'Meta eliminada') + (t.accountId ? ` - de ${acc(t.accountId)}` : ''); amt = cop(t.amount); cls = ''
   } else {
     const g = d.goals.find((x) => x.id === t.goalId)
     icon = <span className="cat-dot" style={{ background: '#F2A90022', color: '#C98A00' }}><PiggyBank size={20} /></span>

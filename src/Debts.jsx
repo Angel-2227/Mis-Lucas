@@ -34,10 +34,10 @@ export function DebtFields({ v, set, d, locked }) {
 }
 
 // Cuenta donde queda guardado un ahorro.
-export function SavingAccountField({ d, value, onChange }) {
+export function SavingAccountField({ d, value, onChange, label = 'Guardado en' }) {
   const eligible = d.accounts.filter((a) => a.type !== 'sitp' && a.type !== 'credit')
   return (
-    <Field label="Guardado en">
+    <Field label={label}>
       <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">Sin tarjeta (apartado general)</option>
         {eligible.map((a) => <option key={a.id} value={a.id}>{a.name}{a.owner ? ` (${a.owner})` : ''}</option>)}

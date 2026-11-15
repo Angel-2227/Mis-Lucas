@@ -5,6 +5,7 @@ import { Empty } from './ui'
 import { useGate, CardNumber } from './Vault'
 import TxRow from './TxRow'
 import TxDetail from './TxDetail'
+import ReconcileSheet from './Reconcile'
 
 const TYPE_LABEL = { debit: 'débito', credit: 'crédito', savings: 'ahorros', sitp: 'transporte', cash: '' }
 
@@ -84,6 +85,7 @@ export default function Home({ d, go, openAdd }) {
   const { accounts, txs, settings, api } = d
   const [showAll, setShowAll] = useState(false)
   const [openId, setOpenId] = useState(null)
+  const [reconciling, setReconciling] = useState(false)
   const [run, gate] = useGate(d)
   const defaultIds = [...accounts].sort((a, b) => d.bal[b.id] - d.bal[a.id]).slice(0, 2).map((a) => a.id)
   const pinnedIds = settings.pinned ?? defaultIds
@@ -96,18 +98,26 @@ export default function Home({ d, go, openAdd }) {
   const month = txs.filter((t) => monthKey(t.date) === cur)
   const inc = month.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
   const exp = month.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
-  const sav = month.filter((t) => t.type === 'saving').reduce((s, t) => s + t.amount, 0)
+  const sav = month.filter((t) => t.type === 'saving').reduce((s, t) => s + t.amount, 0) - month.filter((t) => t.type === 'withdraw').reduce((s, t) => s + t.amount, 0)
   const monthNum = Number(cur.slice(5))
 
+  const dayNow = new Date().getDate()
   const pending = settings.recurring.filter((r) =>
     !r.skipMonths.includes(monthNum) &&
+    // Los gastos fijos avisan desde 3 días antes de su día de pago
+    (r.kind !== 'expense' || !r.day || dayNow >= r.day - 3) &&
     !settings.skipped.includes(`${r.id}-${cur}`) &&
     !txs.some((t) => t.recurringId === r.id && monthKey(t.date) === cur))
 
+  const defAccId = accounts.find((a) => a.id === settings.defaultAccountId && a.type !== 'sitp')?.id || accounts.find((a) => a.type !== 'sitp')?.id || accounts[0]?.id
   const register = (r) => {
-    const accountId = r.accountId || accounts[0]?.id
+    const accountId = r.accountId || defAccId
     if (!accountId) return alert('Crea una cuenta en Ajustes primero.')
-    api.add('transactions', { type: 'income', amount: r.amount, accountId, date: today(), note: r.name, recurringId: r.id, createdAt: Date.now() })
+    if (r.kind === 'expense') {
+      api.add('transactions', { type: 'expense', amount: r.amount, accountId, category: r.category || 'Otros', date: today(), note: r.name, recurringId: r.id, createdAt: Date.now() })
+    } else {
+      api.add('transactions', { type: 'income', amount: r.amount, accountId, date: today(), note: r.name, recurringId: r.id, createdAt: Date.now() })
+    }
   }
   const skip = (r) => api.saveSettings({ skipped: [...settings.skipped, `${r.id}-${cur}`] })
 
@@ -141,6 +151,7 @@ export default function Home({ d, go, openAdd }) {
           <div className="cards-head">
             <h2>Tarjetas</h2>
             <div>
+              <button className="link" onClick={() => setReconciling(true)}>Ajustar saldo</button>
               {settings.pinned && <button className="link" onClick={() => api.saveSettings({ pinned: null })}>Restablecer</button>}
               {(showAll || visible.length < accounts.length) && (
                 <button className="link" onClick={() => setShowAll(!showAll)}>{showAll ? 'Solo fijadas' : `Ver todas (${accounts.length})`}</button>
@@ -162,10 +173,14 @@ export default function Home({ d, go, openAdd }) {
 
       <div className="h-side">
       {pending.map((r) => (
-        <div className="pending" key={r.id}>
-          <div><strong>{r.name} de este mes</strong><small>{cop(r.amount)} sin registrar</small></div>
+        <div className={'pending' + (r.kind === 'expense' ? ' expense' : '')} key={r.id}>
+          {r.kind === 'expense' ? (
+            <div><strong>{r.name}</strong><small>{cop(r.amount)} · {!r.day ? 'por pagar este mes' : dayNow > r.day ? `venció el día ${r.day}` : dayNow === r.day ? 'vence hoy' : `vence el día ${r.day}`}</small></div>
+          ) : (
+            <div><strong>{r.name} de este mes</strong><small>{cop(r.amount)} sin registrar</small></div>
+          )}
           <button className="btn small" onClick={() => skip(r)}>Omitir</button>
-          <button className="btn small primary" onClick={() => register(r)}>Registrar</button>
+          <button className="btn small primary" onClick={() => register(r)}>{r.kind === 'expense' ? 'Pagar' : 'Registrar'}</button>
         </div>
       ))}
 
@@ -190,6 +205,7 @@ export default function Home({ d, go, openAdd }) {
         {recent.length === 0 ? <Empty title="Sin movimientos" text="Toca el botón + para registrar el primero." />
           : recent.map((t) => <TxRow key={t.id} t={t} d={d} onOpen={setOpenId} />)}
       </div>
+      {reconciling && <ReconcileSheet d={d} onClose={() => setReconciling(false)} />}
       {openId && <TxDetail key={openId} id={openId} d={d} onClose={() => setOpenId(null)} />}
       </div>
       </div>

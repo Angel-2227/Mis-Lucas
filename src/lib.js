@@ -92,8 +92,8 @@ export function computeBalances(accounts, txs) {
       if (t.accountId in b) b[t.accountId] -= v
       if (t.toAccountId in b) b[t.toAccountId] += v
     }
-    // Pago de una deuda: 'in' = alguien te pagó, 'out' = tú pagaste. No cuenta como ingreso ni gasto.
-    if (t.type === 'settle' && t.accountId in b) b[t.accountId] += t.dir === 'in' ? v : -v
+    // Pago de deuda o ajuste de saldo: 'in' = alguien te pagó, 'out' = tú pagaste. No cuenta como ingreso ni gasto.
+    if ((t.type === 'settle' || t.type === 'adjust') && t.accountId in b) b[t.accountId] += t.dir === 'in' ? v : -v
   })
   return Object.fromEntries(Object.entries(b).map(([k, v]) => [k, v / 100]))
 }

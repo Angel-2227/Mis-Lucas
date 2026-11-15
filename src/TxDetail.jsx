@@ -5,7 +5,7 @@ import { Sheet, Field, MoneyInput, Progress } from './ui'
 import { cop, round2, computeBalances } from './lib'
 import { DebtFields, SavingAccountField, SettleSheet } from './Debts'
 
-const TYPE_NAME = { expense: 'Gasto', income: 'Ingreso', transfer: 'Transferencia', saving: 'Ahorro', settle: 'Pago de deuda' }
+const TYPE_NAME = { expense: 'Gasto', income: 'Ingreso', transfer: 'Transferencia', saving: 'Ahorro', settle: 'Pago de deuda', adjust: 'Ajuste de saldo', withdraw: 'Retiro de meta' }
 const init = (t) => ({
   amount: String(t.amount ?? ''), accountId: t.accountId || '', toAccountId: t.toAccountId || '', category: t.category || '',
   goalId: t.goalId || '', note: t.note || '', date: t.date || '', debtKind: t.debtKind || '', debtPerson: t.debtPerson || '',
@@ -27,16 +27,20 @@ export default function TxDetail({ id, d, onClose }) {
   const accName = (x) => (x ? d.accounts.find((a) => a.id === x)?.name || 'Cuenta eliminada' : 'Ninguna')
   const goalName = (x) => d.goals.find((g) => g.id === x)?.name || '—'
   const debt = d.debtMap[t.id]
-  const sign = t.type === 'expense' ? '-' : t.type === 'income' ? '+' : ''
-  const cls = t.type === 'expense' ? 'neg' : t.type === 'income' ? 'pos' : ''
+  const dirTx = t.type === 'settle' || t.type === 'adjust'
+  const isIn = t.type === 'income' || (dirTx && t.dir === 'in')
+  const isOut = t.type === 'expense' || (dirTx && t.dir === 'out')
+  const sign = isOut ? '-' : isIn ? '+' : ''
+  const cls = isOut ? 'neg' : isIn ? 'pos' : ''
+  const goalTx = t.type === 'saving' || t.type === 'withdraw'
   const isCash = (x) => d.accounts.find((a) => a.id === x)?.type === 'cash'
   const owe = t.type === 'expense' && f.debtKind === 'owe'
-  const decimals = t.type === 'saving' ? true : t.type === 'transfer' ? !(isCash(f.accountId) || isCash(f.toAccountId)) : owe ? true : !isCash(f.accountId)
+  const decimals = goalTx ? true : t.type === 'transfer' ? !(isCash(f.accountId) || isCash(f.toAccountId)) : owe ? true : !isCash(f.accountId)
   const amountNum = decimals ? round2(Number(f.amount)) : Math.round(Number(f.amount) || 0)
-  const needsAccount = t.type !== 'saving' && !owe
+  const needsAccount = !goalTx && !owe
   const valid = amountNum > 0 && f.date && (!needsAccount || f.accountId) &&
     (t.type !== 'transfer' || (f.toAccountId && f.toAccountId !== f.accountId)) &&
-    (t.type !== 'saving' || f.goalId) && (!f.debtKind || f.debtPerson.trim())
+    (!goalTx || f.goalId) && (!f.debtKind || f.debtPerson.trim())
 
   // Valores nuevos (undefined = campo vacío / se quita del movimiento)
   const build = () => {
@@ -49,13 +53,13 @@ export default function TxDetail({ id, d, onClose }) {
       const da = round2(Number(f.debtAmount))
       n.debtAmount = f.debtKind === 'owed' && da > 0 && da < amountNum ? da : undefined
     }
-    if (t.type === 'income' || t.type === 'settle') n.accountId = f.accountId
+    if (t.type === 'income' || dirTx) n.accountId = f.accountId
     if (t.type === 'transfer') { n.accountId = f.accountId; n.toAccountId = f.toAccountId }
-    if (t.type === 'saving') { n.goalId = f.goalId; n.accountId = f.accountId || undefined }
+    if (goalTx) { n.goalId = f.goalId; n.accountId = f.accountId || undefined }
     return n
   }
   const n = mode === 'view' ? {} : build()
-  const LABEL = { amount: 'Monto', accountId: t.type === 'income' || t.type === 'settle' && t.dir === 'in' ? 'Entra a' : t.type === 'saving' ? 'Guardado en' : 'Sale de', toAccountId: 'Hacia', category: 'Categoría', goalId: 'Meta', note: 'Nota', date: 'Fecha', debtKind: 'Deuda', debtPerson: 'Persona', debtAmount: 'Valor de la deuda' }
+  const LABEL = { amount: 'Monto', accountId: isIn ? 'Entra a' : t.type === 'saving' ? 'Guardado en' : t.type === 'withdraw' ? 'Sacado de' : 'Sale de', toAccountId: 'Hacia', category: 'Categoría', goalId: 'Meta', note: 'Nota', date: 'Fecha', debtKind: 'Deuda', debtPerson: 'Persona', debtAmount: 'Valor de la deuda' }
   const SHOW = {
     amount: cop, accountId: accName, toAccountId: accName, goalId: goalName, note: (v) => v || '—', date: (v) => v, category: (v) => v || '—',
     debtKind: (v) => (v === 'owed' ? 'Me deben' : v === 'owe' ? 'Yo debo' : 'Sin deuda'), debtPerson: (v) => v || '—',
@@ -118,17 +122,17 @@ export default function TxDetail({ id, d, onClose }) {
             <Field label="Desde"><select className="input" value={f.accountId} onChange={(e) => set('accountId', e.target.value)}>{accountOptions}</select></Field>
             <Field label="Hacia"><select className="input" value={f.toAccountId} onChange={(e) => set('toAccountId', e.target.value)}>{accountOptions}</select></Field>
           </>
-        ) : t.type === 'saving' ? (
+        ) : goalTx ? (
           <>
             <Field label="Meta">
               <select className="input" value={f.goalId} onChange={(e) => set('goalId', e.target.value)}>
                 {d.goals.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </Field>
-            <SavingAccountField d={d} value={f.accountId} onChange={(v) => set('accountId', v)} />
+            <SavingAccountField d={d} label={t.type === 'withdraw' ? 'Sacado de' : 'Guardado en'} value={f.accountId} onChange={(v) => set('accountId', v)} />
           </>
         ) : needsAccount ? (
-          <Field label={t.type === 'expense' ? 'Sale de' : t.type === 'settle' && t.dir === 'out' ? 'Sale de' : 'Entra a'}>
+          <Field label={isOut ? 'Sale de' : 'Entra a'}>
             <select className="input" value={f.accountId} onChange={(e) => set('accountId', e.target.value)}>
               {f.accountId === '' && <option value="">Elige una cuenta</option>}{accountOptions}
             </select>
@@ -156,6 +160,7 @@ export default function TxDetail({ id, d, onClose }) {
   // ---------- Ticket ----------
   const when = t.createdAt ? new Date(t.createdAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : null
   return (
+    <>
     <Sheet title="Detalle del movimiento" onClose={onClose}>
       <div className="ticket">
         <div className="ticket-head">
@@ -165,8 +170,8 @@ export default function TxDetail({ id, d, onClose }) {
         <div className="ticket-lines">
           <Line k="Fecha" v={t.date} />
           {t.type === 'transfer' ? (<><Line k="Desde" v={accName(t.accountId)} /><Line k="Hacia" v={accName(t.toAccountId)} /></>)
-            : t.type === 'saving' ? (<><Line k="Meta" v={goalName(t.goalId)} /><Line k="Guardado en" v={t.accountId ? accName(t.accountId) : 'Apartado general'} /></>)
-            : t.accountId ? <Line k={t.type === 'income' || (t.type === 'settle' && t.dir === 'in') ? 'Entra a' : 'Sale de'} v={accName(t.accountId)} />
+            : goalTx ? (<><Line k="Meta" v={goalName(t.goalId)} /><Line k={t.type === 'withdraw' ? 'Sacado de' : 'Guardado en'} v={t.accountId ? accName(t.accountId) : 'Apartado general'} /></>)
+            : t.accountId ? <Line k={isIn ? 'Entra a' : 'Sale de'} v={accName(t.accountId)} />
             : <Line k="Cuenta" v="Plata prestada (no sale de tus cuentas)" />}
           {t.type === 'expense' && <Line k="Categoría" v={t.category || '—'} />}
           {t.qty ? <Line k="Pasajes" v={t.qty} /> : null}
@@ -191,7 +196,8 @@ export default function TxDetail({ id, d, onClose }) {
         <button className="btn primary" onClick={() => { setF(init(t)); setMode('edit') }}><Pencil size={16} /> Editar</button>
         <button className="btn danger" onClick={remove}><Trash2 size={16} /> Eliminar</button>
       </div>
-      {settling && <SettleSheet d={d} debt={debt} onClose={() => setSettling(false)} />}
     </Sheet>
+    {settling && <SettleSheet d={d} debt={debt} onClose={() => setSettling(false)} />}
+    </>
   )
 }
