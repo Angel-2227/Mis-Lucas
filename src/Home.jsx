@@ -51,7 +51,7 @@ function AccountCard({ a, balance, saved, isDefault, fare, onFare, pinned, onPin
       {WM && <WM className="watermark" size={110} />}
       <div className="bcard-top">
         <div className="bcard-title"><strong>{a.name}</strong>{sub && <small>{sub}</small>}</div>
-        <BrandLogo brand={key} type={a.type} />
+        <BrandLogo brand={key === 'sitp' ? 'tullave' : key} type={a.type} />
       </div>
       <div className="bcard-mid">
         <small>{a.type === 'credit' ? 'Deuda actual' : 'Disponible'}</small>
