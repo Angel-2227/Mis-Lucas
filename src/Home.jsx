@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank, Bus, Smartphone, Landmark, Star } from 'lucide-react'
-import { cop, today, monthKey, BRANDS, navHint } from './lib'
+import { Pin, Settings as Cog, Banknote, Lock, Wifi, PiggyBank, Bus, Smartphone, Landmark, Star, Sparkles } from 'lucide-react'
+import { cop, today, monthKey, monthLabel, shiftMonth, BRANDS, navHint } from './lib'
+import { monthStats } from './insights'
 import { Empty } from './ui'
 import { useGate, CardNumber } from './Vault'
 import TxRow from './TxRow'
@@ -121,6 +122,9 @@ export default function Home({ d, go, openAdd }) {
   }
   const skip = (r) => api.saveSettings({ skipped: [...settings.skipped, `${r.id}-${cur}`] })
 
+  const lastKey = shiftMonth(cur, -1)
+  const summaryReady = !(d.summaries || []).some((s) => s.id === lastKey) && monthStats(txs, lastKey).count > 0
+
   const recent = [...txs].sort((a, b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt)).slice(0, 5)
 
   return (
@@ -128,7 +132,10 @@ export default function Home({ d, go, openAdd }) {
       {gate}
       <header className="top">
         <div><small>Hola, {d.user.displayName?.split(' ')[0] || 'bienvenido'}</small><h1>Tu bolsillo</h1></div>
-        <button className="icon-btn round" onClick={() => go('settings')} aria-label="Ajustes"><Cog size={20} /></button>
+        <div className="top-btns">
+          <button className="icon-btn round" onClick={() => go('assistant')} aria-label="Asistente"><Sparkles size={20} /></button>
+          <button className="icon-btn round" onClick={() => go('settings')} aria-label="Ajustes"><Cog size={20} /></button>
+        </div>
       </header>
 
       <div className="home-grid">
@@ -172,6 +179,12 @@ export default function Home({ d, go, openAdd }) {
       </div>
 
       <div className="h-side">
+      {summaryReady && (
+        <div className="pending">
+          <div><strong>Resumen de {monthLabel(lastKey).split(' ')[0]} listo</strong><small>Compáralo con el mes anterior</small></div>
+          <button className="btn small primary" onClick={() => go('assistant')}>Ver</button>
+        </div>
+      )}
       {pending.map((r) => (
         <div className={'pending' + (r.kind === 'expense' ? ' expense' : '')} key={r.id}>
           {r.kind === 'expense' ? (

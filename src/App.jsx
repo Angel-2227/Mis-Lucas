@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
 import { addDoc, collection, deleteDoc, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
-import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart } from 'lucide-react'
+import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart, Sparkles } from 'lucide-react'
 import { auth, db, provider } from './firebase'
 import { DEFAULT_SETTINGS, clean, computeBalances, computeDebts, round2 } from './lib'
 import Home from './Home'
@@ -9,6 +9,7 @@ import Movements from './Movements'
 import Goals from './Goals'
 import Analytics from './Analytics'
 import Settings from './Settings'
+import Assistant from './Assistant'
 import AddSheet from './AddSheet'
 import LockScreen, { BioOffer } from './Lock'
 import { useUnlocked } from './Vault'
@@ -41,7 +42,7 @@ function useSettings(uid) {
   return [settings, loaded]
 }
 
-const ROUTES = { home: '/', moves: '/movimientos', goals: '/metas', stats: '/analisis', settings: '/ajustes' }
+const ROUTES = { home: '/', moves: '/movimientos', goals: '/metas', stats: '/analisis', settings: '/ajustes', assistant: '/asistente' }
 const tabFromPath = (p) => {
   const clean = p.replace(/\/+$/, '') || '/'
   return Object.keys(ROUTES).find((k) => ROUTES[k] === clean) || 'home'
@@ -77,6 +78,7 @@ function Main({ user }) {
   const accounts = useCollection(uid, 'accounts')
   const txs = useCollection(uid, 'transactions')
   const goals = useCollection(uid, 'goals')
+  const summaries = useCollection(uid, 'summaries')
   const [settings, settingsLoaded] = useSettings(uid)
   const [tab, setTab] = useState(() => tabFromPath(window.location.pathname))
   const go = (t) => {
@@ -95,6 +97,7 @@ function Main({ user }) {
     add: (name, data) => addDoc(collection(db, 'users', uid, name), clean(data)),
     update: (name, id, data) => updateDoc(doc(db, 'users', uid, name, id), clean(data)),
     remove: (name, id) => deleteDoc(doc(db, 'users', uid, name, id)),
+    saveSummary: (key, data) => setDoc(doc(db, 'users', uid, 'summaries', key), data, { merge: true }),
     saveSettings: (patch) => setDoc(doc(db, 'users', uid, 'meta', 'settings'), patch, { merge: true }),
     logout: () => signOut(auth),
   }), [uid])
@@ -130,8 +133,8 @@ function Main({ user }) {
     const total = round2(money.reduce((s, a) => s + bal[a.id], 0))
     const physical = round2(money.filter((a) => a.type === 'cash').reduce((s, a) => s + bal[a.id], 0))
     const free = round2(money.filter((a) => !a.locked).reduce((s, a) => s + bal[a.id], 0))
-    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: round2(total - physical), available: round2(free - reservedFree), savedByAccount, debts, debtMap, owedToMe, iOwe, api, user }
-  }, [accounts, txs, goals, settings, api, user])
+    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: round2(total - physical), available: round2(free - reservedFree), savedByAccount, debts, debtMap, owedToMe, iOwe, summaries, api, user }
+  }, [accounts, txs, goals, settings, summaries, api, user])
 
   const [online, setOnline] = useState(navigator.onLine)
   useEffect(() => {
@@ -172,7 +175,8 @@ function Main({ user }) {
         {tab === 'home' && <Home d={d} go={go} openAdd={openAdd} />}
         {tab === 'moves' && <Movements d={d} />}
         {tab === 'goals' && <Goals d={d} openAdd={openAdd} />}
-        {tab === 'stats' && <Analytics d={d} />}
+        {tab === 'stats' && <Analytics d={d} go={go} />}
+        {tab === 'assistant' && <Assistant d={d} back={() => go('home')} />}
         {tab === 'settings' && <Settings d={d} back={() => go('home')} />}
       </main>
       <nav className="bottom-nav">
@@ -182,6 +186,7 @@ function Main({ user }) {
         ) : (
           <button key={i} className="fab" onClick={() => openAdd()} aria-label="Agregar movimiento"><Plus size={26} /><span className="fab-label">Nuevo movimiento</span></button>
         ))}
+        <a href={ROUTES.assistant} className={'nav-desk' + (tab === 'assistant' ? ' on' : '')} onClick={(e) => { e.preventDefault(); go('assistant') }}><Sparkles size={22} /><span>Asistente</span></a>
       </nav>
       {sheet && <AddSheet d={d} initial={sheet.initial} onClose={() => setSheet(null)} />}
     </div>

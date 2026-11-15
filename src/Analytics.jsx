@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { cop, today, monthKey, monthLabel, shiftMonth, MONTHS_SHORT } from './lib'
 import { MonthNav, Empty } from './ui'
 
-export default function Analytics({ d }) {
+export default function Analytics({ d, go }) {
   const [month, setMonth] = useState(monthKey(today()))
   const sum = (key, type) => d.txs.filter((t) => t.type === type && monthKey(t.date) === key).reduce((s, t) => s + t.amount, 0)
 
@@ -50,7 +50,7 @@ export default function Analytics({ d }) {
 
   return (
     <div className="page">
-      <h1>Análisis</h1>
+      <div className="top"><h1>Análisis</h1><button className="btn small" onClick={() => go('assistant')}>Asistente</button></div>
       <MonthNav month={month} onChange={setMonth} label={monthLabel} shift={shiftMonth} />
 
       <div className="stats-grid">

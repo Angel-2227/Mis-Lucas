@@ -352,3 +352,20 @@ small,.muted{color:var(--muted);font-size:12.5px}
 
 .blogo[src*="tullave"]{max-width:72px;max-height:26px}
 @media (max-width:767px){.blogo[src*="tullave"]{max-width:54px;max-height:20px}}
+
+/* ---------- Asistente ---------- */
+.seg button:disabled{opacity:.4;cursor:default}
+.notes{margin:0;list-style:none}
+.notes li{position:relative;padding:8px 0 8px 18px;font-size:14.5px;line-height:1.4}
+.notes li+li{border-top:1px solid var(--line)}
+.notes li::before{content:"";position:absolute;left:2px;top:15px;width:7px;height:7px;border-radius:50%;background:var(--dark)}
+.cmp-row{display:grid;grid-template-columns:1fr auto 58px;gap:10px;align-items:baseline;padding:10px 0}
+.cmp-row+.cmp-row{border-top:1px solid var(--line)}
+.cmp-row.flush{padding:0 0 6px}
+.cmp-row b{font-family:var(--font-d);font-size:15px;white-space:nowrap}
+.cmp-prev{display:block;color:var(--muted);font-size:12px}
+.delta{font-size:12.5px;font-weight:600;text-align:right}
+.delta.good{color:var(--green)} .delta.bad{color:var(--red)} .delta.flat{color:var(--muted);font-weight:500}
+.bottom-nav a.nav-desk{display:none}
+@media (min-width:768px){.bottom-nav a.nav-desk{display:flex}}
+.top-btns{display:flex;gap:8px}
