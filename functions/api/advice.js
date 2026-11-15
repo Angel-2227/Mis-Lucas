@@ -55,6 +55,17 @@ function summaryMessages(data) {
   return [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }]
 }
 
+function chatMessages(data, history) {
+  const system = [
+    SYSTEM,
+    'Respondes preguntas sobre sus finanzas usando solo el contexto que sigue (JSON calculado por la app). Si falta un dato, dilo; no inventes cifras.',
+    'Respuestas cortas, máximo 120 palabras, sin markdown ni listas con asteriscos. Para recomendar ahorro indica categoría, monto sugerido y por qué.',
+    'Haz solo sumas o restas simples con los datos del contexto; si necesitas un cálculo más complejo, di que no lo tienes. Si preguntan algo ajeno a sus finanzas, redirige con amabilidad.',
+    'Contexto: ' + JSON.stringify(data),
+  ].join('\n')
+  return [{ role: 'system', content: system }, ...history]
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.GROQ_API_KEY || !env.FIREBASE_PROJECT_ID || !env.ALLOWED_UID) return json({ error: 'config' }, 500)
 
@@ -68,10 +79,20 @@ export async function onRequestPost({ request, env }) {
   if (raw.length > 20000) return json({ error: 'too_big' }, 413)
   let body
   try { body = JSON.parse(raw) } catch { return json({ error: 'bad_request' }, 400) }
-  if (body.kind !== 'summary' || !body.data || typeof body.data !== 'object') return json({ error: 'bad_request' }, 400)
+  if (!body.data || typeof body.data !== 'object') return json({ error: 'bad_request' }, 400)
+  let messages
+  if (body.kind === 'summary') messages = summaryMessages(body.data)
+  else if (body.kind === 'chat') {
+    const history = (Array.isArray(body.messages) ? body.messages : [])
+      .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim())
+      .map((m) => ({ role: m.role, content: m.content.trim().slice(0, 800) }))
+      .slice(-8)
+    if (!history.length || history[history.length - 1].role !== 'user') return json({ error: 'bad_request' }, 400)
+    messages = chatMessages(body.data, history)
+  } else return json({ error: 'bad_request' }, 400)
 
   const model = env.GROQ_MODEL || 'openai/gpt-oss-120b'
-  const payload = { model, messages: summaryMessages(body.data), temperature: 0.4, max_completion_tokens: 2000 }
+  const payload = { model, messages, temperature: 0.4, max_completion_tokens: 2000 }
   if (model.includes('gpt-oss')) payload.reasoning_effort = 'low'
 
   const ctl = new AbortController()

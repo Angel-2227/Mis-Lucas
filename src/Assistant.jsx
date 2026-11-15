@@ -4,6 +4,7 @@ import { cop, today, monthKey, monthLabel, shiftMonth } from './lib'
 import { MonthNav, Empty, Progress } from './ui'
 import { monthStats, compareMonths, notes } from './insights'
 import { askAdvice, buildPayload, parseAdvice } from './ai'
+import Chat from './Chat'
 
 function Delta({ r }) {
   if (r.prev === 0 && r.cur === 0) return <span className="delta flat">-</span>
@@ -16,6 +17,8 @@ function Delta({ r }) {
 
 export default function Assistant({ d, back }) {
   const cur = monthKey(today())
+  const [tab, setTab] = useState('summary')
+  const [chat, setChat] = useState([]) // la conversación vive mientras la app esté abierta
   const [month, setMonth] = useState(shiftMonth(cur, -1)) // por defecto, el último mes cerrado
   const prevKey = shiftMonth(month, -1)
   const stats = monthStats(d.txs, month)
@@ -65,11 +68,13 @@ export default function Assistant({ d, back }) {
       </header>
 
       <div className="seg">
-        <button className="on">Resumen</button>
-        <button disabled>Chat</button>
+        <button className={tab === 'summary' ? 'on' : ''} onClick={() => setTab('summary')}>Resumen</button>
+        <button className={tab === 'chat' ? 'on' : ''} onClick={() => setTab('chat')}>Chat</button>
         <button disabled>Plan</button>
       </div>
 
+      {tab === 'chat' ? <Chat d={d} msgs={chat} setMsgs={setChat} /> : (
+      <>
       <MonthNav month={month} onChange={setMonth} label={monthLabel} shift={shiftMonth} />
       {!closed && <p className="hint">Este mes aún no termina: los números son parciales.</p>}
 
@@ -156,6 +161,8 @@ export default function Assistant({ d, back }) {
             )}
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   )

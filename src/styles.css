@@ -374,3 +374,15 @@ small,.muted{color:var(--muted);font-size:12.5px}
 .ai-h{margin:14px 0 4px}
 .ai-card .notes{padding:0}
 .ai-card .btn.wide{margin-top:14px}
+.chat{margin-top:14px}
+.bubbles{display:flex;flex-direction:column;gap:8px}
+.bubble{max-width:86%;padding:10px 14px;border-radius:18px;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+.bubble.user{align-self:flex-end;background:var(--dark);color:#fff;border-bottom-right-radius:6px}
+.bubble.assistant{align-self:flex-start;background:var(--paper);border:1px solid var(--line);border-bottom-left-radius:6px}
+.bubble.typing{color:var(--muted)}
+.chat-input{display:flex;gap:8px;margin-top:14px}
+.chat-input .input{flex:1;min-width:0}
+.chat-input .btn{padding:0 18px}
+.chat-foot{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-top:10px}
+.chat-foot .link{margin-left:0;white-space:nowrap;font-size:13px}
+.chat .chips{margin-top:10px}
