@@ -1,134 +1,201 @@
-import { useEffect, useMemo, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
-import { auth, provider } from './firebase';
-import { useUserData } from './useUserData';
-import Overview from './components/Overview.jsx';
-import Grades from './components/Grades.jsx';
-import Chat from './components/Chat.jsx';
-import Bank from './components/Bank.jsx';
-import Schedule from './components/Schedule.jsx';
-import Malla from './components/Malla.jsx';
-import Tasks from './components/Tasks.jsx';
-import Settings from './components/Settings.jsx';
-import Cronogramas from './components/Cronogramas.jsx';
-import { overallAvg, ensureGrades } from './lib/grades';
-import { planCredits } from './lib/plan';
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth'
+import { addDoc, collection, deleteDoc, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore'
+import { Home as HomeIcon, ListOrdered, Plus, Target, PieChart, Sparkles } from 'lucide-react'
+import { auth, db, provider } from './firebase'
+import { DEFAULT_SETTINGS, clean, computeBalances, computeDebts, round2 } from './lib'
+import Home from './Home'
+import Movements from './Movements'
+import Goals from './Goals'
+import Analytics from './Analytics'
+import Settings from './Settings'
+import Assistant from './Assistant'
+import AddSheet from './AddSheet'
+import LockScreen, { BioOffer } from './Lock'
+import { useUnlocked } from './Vault'
+import { encryptText } from './vault'
+
+function useCollection(uid, name) {
+  const [items, setItems] = useState([])
+  useEffect(() => {
+    return onSnapshot(collection(db, 'users', uid, name), (s) =>
+      setItems(s.docs.map((d) => ({ id: d.id, ...d.data() })))
+    )
+  }, [uid, name])
+  return items
+}
+
+function useSettings(uid) {
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [loaded, setLoaded] = useState(false)
+  const seeded = useRef(false)
+  useEffect(() => {
+    const ref = doc(db, 'users', uid, 'meta', 'settings')
+    return onSnapshot(ref, { includeMetadataChanges: true }, (s) => {
+      if (s.exists()) { setSettings({ ...DEFAULT_SETTINGS, ...s.data() }); setLoaded(true) }
+      else if (!s.metadata.fromCache) {
+        setLoaded(true)
+        if (!seeded.current) { seeded.current = true; setDoc(ref, DEFAULT_SETTINGS) }
+      }
+    }, () => setLoaded(true))
+  }, [uid])
+  return [settings, loaded]
+}
+
+const ROUTES = { home: '/', moves: '/movimientos', goals: '/metas', stats: '/analisis', settings: '/ajustes', assistant: '/asistente' }
+const tabFromPath = (p) => {
+  const clean = p.replace(/\/+$/, '') || '/'
+  return Object.keys(ROUTES).find((k) => ROUTES[k] === clean) || 'home'
+}
+
+function NavBtn({ id, label, Icon, on, onClick }) {
+  return (
+    <a href={ROUTES[id]} className={on ? 'on' : ''} onClick={(e) => { e.preventDefault(); onClick() }}>
+      <Icon size={22} /><span>{label}</span>
+    </a>
+  )
+}
+
+async function login() {
+  try { await signInWithPopup(auth, provider) } catch (e) {
+    if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment'].includes(e.code)) signInWithRedirect(auth, provider)
+  }
+}
 
 function Login() {
-  const [busy, setBusy] = useState(false);
-  const go = async () => {
-    setBusy(true);
-    try { await signInWithPopup(auth, provider); } catch (e) { alert('Error al iniciar sesión: ' + e.message); setBusy(false); }
-  };
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#2e7d32,#1b5e20)', padding: 20 }}>
-      <div style={{ background: '#fff', padding: 40, borderRadius: 20, maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }}>
-        <div style={{ width: 80, height: 80, background: 'linear-gradient(135deg,#2e7d32,#66bb6a)', borderRadius: 20, margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem', color: '#fff', fontWeight: 700 }}>SPA</div>
-        <h1 style={{ color: '#2e7d32', fontSize: '1.6rem', marginBottom: 8 }}>Sistema de Planificación Académica</h1>
-        <p style={{ color: '#6c757d', marginBottom: 32 }}>Organiza tu carrera universitaria</p>
-        <button disabled={busy} onClick={go} style={{ width: '100%', padding: '14px 24px', background: '#fff', border: '2px solid #e0e0e0', borderRadius: 8, fontSize: '1rem', fontWeight: 600, cursor: 'pointer', color: '#212529' }}>
-          {busy ? 'Iniciando sesión...' : 'Continuar con Google'}
-        </button>
-        <p style={{ marginTop: 24, fontSize: '.85rem', color: '#6c757d' }}>🔒 Tus datos se sincronizan de forma segura en la nube</p>
-      </div>
+    <div className="login">
+      <div className="login-mark">B</div>
+      <h1>Bolsillo</h1>
+      <p>Tus ingresos, gastos y metas en un solo lugar.</p>
+      <button className="btn primary" onClick={login}>Entrar con Google</button>
     </div>
-  );
+  )
 }
 
-const NAV = [['overview', '📊', 'Resumen General', 'Resumen'], ['subjects', '📚', 'Banco de Materias', 'Banco'], ['schedule', '📅', 'Planificador de Horarios', 'Horarios'], ['cronos', '🗓️', 'Cronogramas', 'Cronos'],
-  ['malla', '🗺️', 'Malla Curricular', 'Malla'], ['grades', '📝', 'Notas', 'Notas'], ['tasks', '✅', 'Tareas', 'Tareas'], ['config', '⚙️', 'Configuración', 'Ajustes']];
-const BOTTOM = ['overview', 'grades', 'schedule', 'tasks'];
+function Main({ user }) {
+  const uid = user.uid
+  const accounts = useCollection(uid, 'accounts')
+  const txs = useCollection(uid, 'transactions')
+  const goals = useCollection(uid, 'goals')
+  const summaries = useCollection(uid, 'summaries')
+  const [settings, settingsLoaded] = useSettings(uid)
+  const [tab, setTab] = useState(() => tabFromPath(window.location.pathname))
+  const go = (t) => {
+    if (ROUTES[t] !== window.location.pathname) window.history.pushState({}, '', ROUTES[t])
+    setTab(t)
+    window.scrollTo(0, 0)
+  }
+  useEffect(() => {
+    const onPop = () => setTab(tabFromPath(window.location.pathname))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  const [sheet, setSheet] = useState(null) // { initial }
 
-// Toda la interfaz, recibe los datos por props (así se puede probar sin Firebase)
-export function Main({ user, data, update, discard, logout }) {
-  const [view, setView] = useState('overview');
-  const [side, setSide] = useState(false), [more, setMore] = useState(false);
-  const [focus, setFocus] = useState(null);
-  const g = useMemo(() => ensureGrades(data.studyPlan, data.gradesData || {}, data.subjectBank || []), [data]);
+  const api = useMemo(() => ({
+    add: (name, data) => addDoc(collection(db, 'users', uid, name), clean(data)),
+    update: (name, id, data) => updateDoc(doc(db, 'users', uid, name, id), clean(data)),
+    remove: (name, id) => deleteDoc(doc(db, 'users', uid, name, id)),
+    saveSummary: (key, data) => setDoc(doc(db, 'users', uid, 'summaries', key), data, { merge: true }),
+    saveSettings: (patch) => setDoc(doc(db, 'users', uid, 'meta', 'settings'), patch, { merge: true }),
+    logout: () => signOut(auth),
+  }), [uid])
 
-  const plan = data.studyPlan;
-  let done = 0, cur = 0;
-  Object.values(plan).forEach(s => { const c = planCredits(s); if (s.status === 'completed') done += c; if (s.status === 'current') cur += c; });
-  const total = data.config.totalCredits || 1, pct = Math.round((done / total) * 100);
-  const avg = overallAvg(plan, g);
-  const toggleTheme = () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; localStorage.setItem('theme', t); };
-  const go = k => { setView(k); setSide(false); setMore(false); window.scrollTo(0, 0); };
-  const active = Object.keys(plan).filter(n => plan[n].subjects?.length && plan[n].status !== 'pending').sort((a, b) => a - b);
-  const cur_ = NAV.find(n => n[0] === view);
+  const d = useMemo(() => {
+    const bal = computeBalances(accounts, txs)
+    const savedByGoal = {}
+    // Aportes suman y retiros restan. Un retiro libera el dinero sin moverlo de la cuenta.
+    txs.filter((t) => t.type === 'saving').forEach((t) => (savedByGoal[t.goalId] = (savedByGoal[t.goalId] || 0) + t.amount))
+    txs.filter((t) => t.type === 'withdraw').forEach((t) => (savedByGoal[t.goalId] = (savedByGoal[t.goalId] || 0) - t.amount))
+    Object.keys(savedByGoal).forEach((k) => (savedByGoal[k] = round2(Math.max(0, savedByGoal[k]))))
+    const reserved = round2(goals.filter((g) => !g.done).reduce((s, g) => s + (savedByGoal[g.id] || 0), 0))
+    const money = accounts.filter((a) => a.type !== 'sitp') // el saldo SITP solo sirve para pasajes
+    // Ahorro por tarjeta: el dinero de metas guardado en una cuenta sigue ahí, pero queda "en ahorro".
+    const activeGoalIds = new Set(goals.filter((g) => !g.done).map((g) => g.id))
+    const accById = Object.fromEntries(accounts.map((a) => [a.id, a]))
+    const savedByAccount = {}
+    txs.filter((t) => (t.type === 'saving' || t.type === 'withdraw') && activeGoalIds.has(t.goalId)).forEach((t) => {
+      const a = accById[t.accountId]
+      if (a) savedByAccount[a.id] = round2((savedByAccount[a.id] || 0) + (t.type === 'saving' ? t.amount : -t.amount))
+    })
+    let lockedSaved = 0
+    Object.keys(savedByAccount).forEach((k) => {
+      savedByAccount[k] = Math.max(0, savedByAccount[k])
+      const a = accById[k]
+      if (a.locked || a.type === 'sitp') lockedSaved = round2(lockedSaved + savedByAccount[k])
+    })
+    const reservedFree = round2(Math.max(0, reserved - lockedSaved))
+    const debts = computeDebts(txs)
+    const debtMap = Object.fromEntries(debts.map((x) => [x.id, x]))
+    const owedToMe = round2(debts.filter((x) => x.kind === 'owed').reduce((s, x) => s + x.left, 0))
+    const iOwe = round2(debts.filter((x) => x.kind === 'owe').reduce((s, x) => s + x.left, 0))
+    const total = round2(money.reduce((s, a) => s + bal[a.id], 0))
+    const physical = round2(money.filter((a) => a.type === 'cash').reduce((s, a) => s + bal[a.id], 0))
+    const free = round2(money.filter((a) => !a.locked).reduce((s, a) => s + bal[a.id], 0))
+    return { accounts, txs, goals, settings, bal, savedByGoal, reserved, total, physical, virtual: round2(total - physical), available: round2(free - reservedFree), savedByAccount, debts, debtMap, owedToMe, iOwe, summaries, api, user }
+  }, [accounts, txs, goals, settings, summaries, api, user])
+
+  const [online, setOnline] = useState(navigator.onLine)
+  useEffect(() => {
+    const on = () => setOnline(true), off = () => setOnline(false)
+    window.addEventListener('online', on); window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
+  const unlocked = useUnlocked()
+  // La app se desbloquea una vez por sesión (al abrirla); si la clave ya se usó, también cuenta.
+  const [appUnlocked, setAppUnlocked] = useState(false)
+  useEffect(() => { if (unlocked) setAppUnlocked(true) }, [unlocked])
+  useEffect(() => {
+    if (!unlocked) return
+    accounts.filter((a) => a.number && !a.numberEnc).forEach(async (a) => {
+      try {
+        const digits = String(a.number).replace(/\D/g, '')
+        api.update('accounts', a.id, { numberEnc: await encryptText(digits), last4: digits.slice(-4), number: deleteField() })
+      } catch { /* se reintenta al desbloquear de nuevo */ }
+    })
+  }, [unlocked, accounts, api])
+
+  const openAdd = (initial = {}) => setSheet({ initial })
+  const nav = [
+    ['home', 'Inicio', HomeIcon], ['moves', 'Movimientos', ListOrdered], null,
+    ['goals', 'Metas', Target], ['stats', 'Análisis', PieChart],
+  ]
+
+  if (!settingsLoaded) return <div className="login"><p>Cargando...</p></div>
+  if (settings.vault && !appUnlocked && !unlocked) {
+    return <LockScreen user={user} vault={settings.vault} accounts={accounts} api={api} onUnlock={() => setAppUnlocked(true)} />
+  }
 
   return (
-    <>
-      <div className="m-topbar"><div className="m-topbar-title"><span className="m-topbar-logo">SPA</span>{cur_[1]} {cur_[3]}</div><button className="m-topbar-btn" onClick={toggleTheme} aria-label="Cambiar tema">🌓</button></div>
-      <button className="mobile-toggle" onClick={() => setSide(!side)}>☰</button>
-      <div className={'sidebar-overlay' + (side ? ' open' : '')} onClick={() => setSide(false)} />
-      <div className="app-container">
-        <aside className={'sidebar' + (side ? ' open' : '')} id="sidebar">
-          <div className="sidebar-header"><h1>SPA</h1><p>Sistema de Planificación Académica</p></div>
-          <nav className="sidebar-nav">{NAV.map(([k, i, l]) => <div key={k} className={'nav-item' + (view === k ? ' active' : '')} onClick={() => go(k)}>{i} {l}</div>)}</nav>
-          <div className="sidebar-section">
-            <div className="section-title">Estadísticas Rápidas</div>
-            <div style={{ fontSize: '.85rem' }}>
-              <div style={{ marginBottom: 8 }}><strong>Progreso:</strong> {pct}%</div>
-              <div style={{ marginBottom: 8 }}><strong>Completados:</strong> {done}</div>
-              <div style={{ marginBottom: 8 }}><strong>Pendientes:</strong> {Math.max(0, total - done - cur)}</div>
-              <div style={{ marginBottom: 8 }}><strong>Promedio:</strong> {avg !== null ? avg.toFixed(2) : 'N/A'}</div>
-            </div>
-            <div className="progress-bar"><div className="progress-fill" style={{ width: pct + '%' }} /></div>
-          </div>
-          <div className="sidebar-section">
-            <div className="section-title">Semestres Activos</div>
-            {active.map(n => <div key={n} onClick={() => { setView('overview'); setSide(false); setFocus({ n, t: Date.now() }); }} style={{ fontSize: '.8rem', marginBottom: 6, padding: '4px 8px', background: 'var(--bg-secondary)', borderRadius: 4, cursor: 'pointer' }}>Semestre {n} <span style={{ color: 'var(--text-secondary)' }}>({plan[n].subjects.length})</span></div>)}
-          </div>
-        </aside>
-        <main className="main-content">
-          {view === 'overview' && <Overview data={data} update={update} user={user} focus={focus} goTasks={() => go('tasks')} goCronos={() => go('cronos')} toggleTheme={toggleTheme} logout={logout} />}
-          {view === 'subjects' && <Bank data={data} update={update} />}
-          {view === 'schedule' && <Schedule data={data} update={update} />}
-          {view === 'cronos' && <Cronogramas data={data} update={update} goSchedule={() => go('schedule')} />}
-          {view === 'malla' && <Malla data={data} update={update} user={user} />}
-          {view === 'grades' && <Grades data={data} update={update} />}
-          {view === 'tasks' && <Tasks data={data} update={update} />}
-          {view === 'config' && <Settings data={data} update={update} user={user} discard={discard} />}
-        </main>
-      </div>
-
-      {/* Navegación inferior para celular/tablet */}
-      {more && <div className="m-more-overlay" onClick={() => setMore(false)} />}
-      {more && <div className="m-more-sheet">
-        <div className="m-more-handle" />
-        <div className="m-more-grid">{NAV.filter(n => !BOTTOM.includes(n[0])).map(([k, i, l]) => <button key={k} className={view === k ? 'active' : ''} onClick={() => go(k)}><span>{i}</span>{l}</button>)}</div>
-        <div className="m-more-foot"><button onClick={toggleTheme}>🌓 Cambiar tema</button><button onClick={logout}>🚪 Cerrar sesión</button></div>
-      </div>}
-      <nav className="m-bottom-nav">
-        {BOTTOM.map(k => { const n = NAV.find(x => x[0] === k); return <button key={k} className={view === k ? 'active' : ''} onClick={() => go(k)}><span className="m-ico">{n[1]}</span><span className="m-lbl">{n[3]}</span></button>; })}
-        <button className={more || !BOTTOM.includes(view) ? 'active' : ''} onClick={() => setMore(!more)}><span className="m-ico">☰</span><span className="m-lbl">Más</span></button>
+    <div className="app">
+      <BioOffer user={user} hasVault={!!settings.vault} />
+      {!online && <div className="offline">Sin conexión. Tus cambios se guardan y se sincronizan al volver.</div>}
+      <main>
+        {tab === 'home' && <Home d={d} go={go} openAdd={openAdd} />}
+        {tab === 'moves' && <Movements d={d} />}
+        {tab === 'goals' && <Goals d={d} openAdd={openAdd} />}
+        {tab === 'stats' && <Analytics d={d} go={go} />}
+        {tab === 'assistant' && <Assistant d={d} back={() => go('home')} openAdd={openAdd} />}
+        {tab === 'settings' && <Settings d={d} back={() => go('home')} />}
+      </main>
+      <nav className="bottom-nav">
+        <div className="brand"><b>M</b><span>Mis Lucas</span></div>
+        {nav.map((n, i) => n ? (
+          <NavBtn key={n[0]} id={n[0]} label={n[1]} Icon={n[2]} on={tab === n[0]} onClick={() => go(n[0])} />
+        ) : (
+          <button key={i} className="fab" onClick={() => openAdd()} aria-label="Agregar movimiento"><Plus size={26} /><span className="fab-label">Nuevo movimiento</span></button>
+        ))}
+        <a href={ROUTES.assistant} className={'nav-desk' + (tab === 'assistant' ? ' on' : '')} onClick={(e) => { e.preventDefault(); go('assistant') }}><Sparkles size={22} /><span>Asistente</span></a>
       </nav>
-      <Chat data={data} />
-    </>
-  );
-}
-
-function Shell({ user }) {
-  const { data, update, discard } = useUserData(user);
-  if (!data) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando tus datos…</div>;
-  const logout = () => confirm('¿Cerrar sesión? Tus datos están guardados en la nube.') && signOut(auth);
-  return <Main user={user} data={data} update={update} discard={discard} logout={logout} />;
-}
-
-function InstallButton() {
-  const [ev, setEv] = useState(null);
-  useEffect(() => {
-    const on = e => { e.preventDefault(); setEv(e); }, off = () => setEv(null);
-    addEventListener('beforeinstallprompt', on); addEventListener('appinstalled', off);
-    return () => { removeEventListener('beforeinstallprompt', on); removeEventListener('appinstalled', off); };
-  }, []);
-  if (!ev) return null;
-  return <button className="install-btn" onClick={async () => { ev.prompt(); await ev.userChoice; setEv(null); }}>📱 Instalar App</button>;
+      {sheet && <AddSheet d={d} initial={sheet.initial} onClose={() => setSheet(null)} />}
+    </div>
+  )
 }
 
 export default function App() {
-  const [user, setUser] = useState(undefined);
-  useEffect(() => onAuthStateChanged(auth, setUser), []);
-  if (user === undefined) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando…</div>;
-  return user ? <><Shell user={user} /><InstallButton /></> : <Login />;
+  const [user, setUser] = useState(undefined)
+  useEffect(() => onAuthStateChanged(auth, setUser), [])
+  if (user === undefined) return <div className="login"><p>Cargando...</p></div>
+  return user ? <Main user={user} /> : <Login />
 }

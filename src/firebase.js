@@ -1,16 +1,17 @@
-import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp } from 'firebase/app'
+import { getAuth, GoogleAuthProvider } from 'firebase/auth'
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore'
 
-// Config pública de Firebase (la seguridad real está en las reglas de Firestore)
 const app = initializeApp({
-  apiKey: 'AIzaSyDGfWj0TKSKPqQmtmVvAjaRwcSRP8ThHVQ',
-  authDomain: 'unalspa.firebaseapp.com',
-  projectId: 'unalspa',
-  storageBucket: 'unalspa.firebasestorage.app',
-  messagingSenderId: '262261060132',
-  appId: '1:262261060132:web:21116990b8a1fda92c1eb1'
-});
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const provider = new GoogleAuthProvider();
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+})
+
+export const auth = getAuth(app)
+export const provider = new GoogleAuthProvider()
+// Cache local: la app sigue funcionando sin conexión y sincroniza al volver.
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+})
